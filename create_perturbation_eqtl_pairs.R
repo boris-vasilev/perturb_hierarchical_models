@@ -47,6 +47,12 @@ if(!file.exists(perturbation_pairs_file)) {
   perturbation_effect_df <- results$perturbation_effect_df
   filter_summary <- results$filter_summary
   
+  keep <- paste(perturbation_effect_df$perturbation, perturbation_effect_df$effect) %in%
+    paste(QC$perturbation, QC$effect)
+    perturbation_effect_df <- perturbation_effect_df[keep, ]
+
+  filter_summary$QC_pairs <- nrow(perturbation_effect_df)
+
   # Write valid perturbation-effect pairs
   fwrite(perturbation_effect_df, perturbation_pairs_file)
   
