@@ -28,18 +28,17 @@ read_perturb_h5ad <- function(cells) {
   } else if(cells == "RPE1") {
     h5ad_file_name <- "rpe1_raw_singlecell_01.h5ad"
   }
-  return(
+  if(cells == "K562_GenomeWide") {
+    Convert(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_pseudobulk_de/data", h5ad_file_name), dest = "h5seurat", overwrite = TRUE)
+    return(LoadH5Seurat("/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_pseudobulk_de/data/K562_gwps_raw_singlecell.h5seurat"))
+  } else {
+    return(
     sceasy::convertFormat(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_pseudobulk_de/data", h5ad_file_name), from="anndata", to="seurat")
   )
+  }
 }
 
-if(cells == "K562_GenomeWide") {
-  sceasy::convertFormat("K562_gwps_raw_singlecell.h5ad", from="anndata", to="loom", outFile="K562.loom")
-  Convert("K562.loom", dest = "h5seurat", overwrite = TRUE)
-  seurat_obj <- LoadH5Seurat("K562.h5seurat")
-} else {
-  seurat_obj <- read_perturb_h5ad(cells)
-}
+seurat_obj <- read_perturb_h5ad(cells)
 
 DEGs <- list.files(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb", cells), full.names = T)
 
