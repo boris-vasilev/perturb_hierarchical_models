@@ -79,5 +79,5 @@ dat <- dat %>%
   ungroup()
 
 
-fwrite(dat, file.path(pairs_dir, glue("{ash}{bulk}logit_dat{eff}.csv")))
+fwrite(dat, file.path(pairs_dir, glue("{ash}logit_dat{eff}.csv")))
 
