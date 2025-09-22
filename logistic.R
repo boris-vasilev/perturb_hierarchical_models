@@ -41,7 +41,7 @@ if (model == "varying_intercept_varying_slope") {
 
 cmdstanr::set_cmdstan_path("/home/biv22/rds/hpc-work/.cmdstan/cmdstan-2.36.0")
 
-dat <- fread(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{cells}/{ash}{bulk}logit_dat{eff}.csv"))
+dat <- fread(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{cells}/{ash}logit_dat{eff}.csv"))
 # Fit logistic regression
 fit <- brm(
   formula = formula,
