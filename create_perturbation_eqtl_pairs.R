@@ -1,25 +1,22 @@
 library(tidyverse)
 library(glue)
-library(here)
 library(org.Hs.eg.db)
 library(data.table)
 library(argparse)
-source(here("src/functions_create_perturb_df.R"))
-source(here("src/functions_ashr.R"))
+source("functions_create_perturb_df.R")
+source("functions_ashr.R")
 
 setDTthreads(16)
 
 parser <- ArgumentParser()
 parser$add_argument("--cells", type = "character", help="Cell type: K562_essential, K562, Jurkat, RPE1", required=T)
 parser$add_argument("--ash", action = "store_true", help="Run adaptive shrinkage (ashr)")
-parser$add_argument("--bulk", action = "store_true", help="Pseudobulk?")
 parser$add_argument("--efficient", action = "store_true", help="Filter efficient perturbations only (>70% perturb)")
 parser$add_argument("--unfiltered", action = "store_true", help="Don't filter perturbations-effect pairs for significance")
 args <- parser$parse_args()
 
 cells <- args$cells
 ash <- args$ash
-bulk <- args$bulk
 unfiltered <- args$unfiltered
 efficient <- args$efficient
 
@@ -27,54 +24,44 @@ ash_prefix = if(ash) {"ash_"} else {""}
 efficient_suffix = if(efficient) {"_eff"} else {""}
 unfiltered_suffix = if(unfiltered) {"_all"} else {""}
 ###### PROCESS PERTURB-SEQ DEGS
-
-bulk_prefix <- if(bulk) "bulk_" else ""
-perturb_DEG_dir <- here(glue("data/perturb/DEGs/{bulk_prefix}{cells}"))
-
+data_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/data/"
+perturb_DEG_dir <- file.path(data_dir, "perturb", cells)
+pairs_dir <- file.path(data_dir, "pairs", cells)
+perturbation_pairs_file <- file.path(pairs_dir, glue("{ash_prefix}perturbation_pairs{unfiltered_suffix}{efficient_suffix}.csv"))
+filter_summary_file <- file.path(pairs_dir, "filter_summary_perturbation_pairs.RDS")
 DEG_files <- list.files(perturb_DEG_dir, full.names = TRUE)
-
-perturbation_pairs_file <- here(glue("data/perturb/pairs/{bulk_prefix}{cells}/{ash_prefix}{bulk_prefix}perturbation_pairs{unfiltered_suffix}{efficient_suffix}.csv"))
-QC <- fread(here(glue("data/perturb/QC/{bulk_prefix}{cells}/gene_QC.csv"))) %>%
+QC <- fread(file.path(data_dir, "perturb_QC", cells, "gene_QC.csv")) %>%
   filter(n_expr_trt > 7, n_expr_ctrl > 7)
-
 
 if(!file.exists(perturbation_pairs_file)) {
   if(ash) {
-    perturbation_effect_df <- apply_ash(DEG_files, cores=16, significant=!unfiltered, bulk=bulk)
+    perturbation_effect_df <- apply_ash(DEG_files, cores=16, significant=!unfiltered, bulk=TRUE)
   } else {
     results <- extract_DEGs(DEG_files,
                             cores=16,
                             significant=!unfiltered,
-                            bulk=bulk,
+                            bulk=TRUE,
                             efficient = efficient)
   }
   
   perturbation_effect_df <- results$perturbation_effect_df
   filter_summary <- results$filter_summary
   
-  # keep <- paste(perturbation_effect_df$perturbation, perturbation_effect_df$effect) %in%
-  #   paste(QC$perturbation, QC$effect)
-  # perturbation_effect_df <- perturbation_effect_df[keep, ]
-  # 
-  # filter_summary$QC_pairs <- nrow(perturbation_effect_df)
-  
-  
   # Write valid perturbation-effect pairs
-  fwrite(perturbation_effect_df, here(glue("data/perturb/pairs/{bulk_prefix}{cells}/{ash_prefix}{bulk_prefix}perturbation_pairs{unfiltered_suffix}{efficient_suffix}.csv")))
+  fwrite(perturbation_effect_df, perturbation_pairs_file)
   
   # Write DEGs filter summary
-  
-  saveRDS(filter_summary, here(glue("data/perturb/pairs/{bulk_prefix}{cells}/filter_summary_perturbation_pairs.RDS"))) 
+  saveRDS(filter_summary, filter_summary_file) 
 } else {
   print("Skipping perturbation pairs. Already exist")
-  filter_summary <- readRDS(here(glue("data/perturb/pairs/{bulk_prefix}{cells}/filter_summary_perturbation_pairs.RDS")))
+  filter_summary <- readRDS(filter_summary_file)
   perturbation_effect_df <- fread(perturbation_pairs_file)
 }
 
 ####### PROCESS EQTLS
 ### -- Load and filter cis-eQTLs -- ###
 message("[1/9] Reading cis-eQTLs")
-cis_eQTL <- fread(here("data/summary_stats/cis_eQTLs_eQTLgen.txt"),
+cis_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/cis_eQTLs_eQTLgen.txt",
                   sep = "\t",
                   select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"))
 message("  ✔ cis-eQTLs loaded: ", nrow(cis_eQTL))
@@ -104,7 +91,7 @@ cis_eQTL.perturbations.aggregated <- cis_eQTL.perturbations.all[
 
 ### -- Load and filter trans-eQTLs -- ###
 message("[5/9] Reading trans-eQTLs")
-trans_eQTL <- fread(here("data/summary_stats/trans_eQTLs_eQTLgen.txt"),
+trans_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/trans_eQTLs_eQTLgen.txt",
                     sep = "\t",
                     select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"))
 message("  ✔ trans-eQTLs loaded: ", nrow(trans_eQTL))
@@ -126,8 +113,6 @@ message("[7/9] Filtering trans-eQTLs with matching cis SNPs and calculating beta
 #trans_eQTL.effect.unfiltered <- trans_eQTL.effect.unfiltered[SNP %in% cis_eQTL.perturbations.all$SNP]
 
 # Step 2: Filter for significant FDR < 0.05 trans-eQTLs
-
-output_path <- here(glue("data/perturb/pairs/{bulk_prefix}{cells}/"))
 
 trans_eQTL.effect.significant <- trans_eQTL.effect.unfiltered[FDR < 0.05]
 
@@ -190,10 +175,10 @@ filter_summary$eQTL_perturbs <- uniqueN(QTL.pairs$perturbation)
 filter_summary$eQTL_effects <- uniqueN(QTL.pairs$effect)
 
 # Save results
-output_file <- glue("{ash_prefix}{bulk_prefix}eQTL_pairs{unfiltered_suffix}{efficient_suffix}.csv")
+output_file <- file.path(pairs_dir, glue("{ash_prefix}eQTL_pairs{unfiltered_suffix}{efficient_suffix}.csv"))
 
 message("✔ Writing final outputs...")
-fwrite(QTL.pairs, file = file.path(output_path, output_file))
-saveRDS(filter_summary, file = file.path(output_path, "filter_summary.RDS"))
+fwrite(QTL.pairs, file = output_file)
+saveRDS(filter_summary, file = filter_summary_file)
 message("🎉 Done.")
 

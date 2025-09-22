@@ -1,5 +1,4 @@
 library(tidyverse)
-library(here)
 library(argparse)
 library(glue)
 library(data.table)
@@ -8,7 +7,6 @@ library(data.table)
 parser <- ArgumentParser()
 parser$add_argument("--cells", type = "character", help = "Cell type/line", required = TRUE)
 parser$add_argument("--ash", action = "store_true", help="Run adaptive shrinkage (ashr)")
-parser$add_argument("--bulk", action = "store_true", help="Pseudobulk")
 parser$add_argument("--efficient", action = "store_true", help="Only efficient >70% perturbations")
 
 args <- parser$parse_args()
@@ -18,14 +16,15 @@ cells <- args$cells
 print(glue("Generating data file: Cells: {cells}"))
 
 ash <- if(args$ash) "ash_" else ""
-bulk <- if(args$bulk) "bulk_" else ""
 eff <- if(args$efficient) "_eff" else ""
 
+pairs_dir <- file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/", cells)
+
 # Read perturb-seq pairs
-perturbation_pairs <- fread(here(glue("data/perturb/pairs/{bulk}{cells}/{ash}{bulk}perturbation_pairs{eff}.csv")))
+perturbation_pairs <- fread(file.path(pairs_dir, glue("{ash}perturbation_pairs{eff}.csv")))
 
 # Read eQTL pairs
-eQTL_pairs <- fread(here(glue("data/perturb/pairs/{bulk}{cells}/{ash}{bulk}eQTL_pairs{eff}.csv")))
+eQTL_pairs <- fread(file.path(pairs_dir, glue("{ash}eQTL_pairs{eff}.csv")))
 
 # Identify the lead SNP with the smallest perturbation cis-eQTL p-value
 # In case of SNPs with the same  cis-eQTL p-value pick the one with the biggest Beta in magnitude
@@ -80,5 +79,5 @@ dat <- dat %>%
   ungroup()
 
 
-fwrite(dat, here(glue("data/perturb/pairs/{bulk}{cells}/{ash}{bulk}logit_dat{eff}.csv")))
+fwrite(dat, file.path(pairs_dir, glue("{ash}{bulk}logit_dat{eff}.csv")))
 

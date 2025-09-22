@@ -1,6 +1,5 @@
 library(tidyverse)
 library(brms)
-library(here)
 library(argparse)
 library(glue)
 library(data.table)
@@ -15,7 +14,6 @@ parser <- ArgumentParser()
 parser$add_argument("--cells", type = "character", help = "Cell type/line", required = TRUE)
 parser$add_argument("--model", type = "character", help = "Model type", required = TRUE, choices = supported_models)
 parser$add_argument("--ash", action = "store_true", help="Run adaptive shrinkage (ashr)")
-parser$add_argument("--bulk", action = "store_true", help="Pseudobulk")
 parser$add_argument("--efficient", action = "store_true", help="Efficient perturbations >70% only")
 
 args <- parser$parse_args()
@@ -24,7 +22,6 @@ model <- args$model
 efficient <- args$efficient
 
 ash <- if(args$ash) "ash_" else ""
-bulk <- if(args$bulk) "bulk_" else ""
 eff <- if(args$efficient) "_eff" else ""
 
 print(glue("Cells: {cells}            Model: {model}           Efficient: {efficient} "))
@@ -44,8 +41,7 @@ if (model == "varying_intercept_varying_slope") {
 
 cmdstanr::set_cmdstan_path("/home/biv22/rds/hpc-work/.cmdstan/cmdstan-2.36.0")
 
-dat <- read_csv(here(glue("data/perturb/pairs/{bulk}{cells}/{ash}{bulk}logit_dat{eff}.csv")))
-
+dat <- fread(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{cells}/{ash}{bulk}logit_dat{eff}.csv"))
 # Fit logistic regression
 fit <- brm(
   formula = formula,
@@ -58,4 +54,4 @@ fit <- brm(
   backend = "cmdstanr"
 )
 
-saveRDS(fit, here(glue("models/{bulk}{cells}/N_{ash}logit_{model}{eff}.rds")))
+saveRDS(fit, glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/{ash}logit_{model}{eff}.rds"))

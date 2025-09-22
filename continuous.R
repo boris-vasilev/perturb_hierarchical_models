@@ -1,5 +1,4 @@
 library(tidyverse)
-library(here)
 library(brms)
 library(argparse)
 library(glue)
@@ -19,7 +18,6 @@ parser$add_argument("--cells", type = "character", help = "Cell type/line", requ
 parser$add_argument("--response", type = "character", help = "Response type: trans-eQTL effect size or eQTL effect ratio", required = TRUE, choices = c("trans", "ratio"))
 parser$add_argument("--model", type = "character", help = "Model type", required = TRUE, choices = supported_models)
 parser$add_argument("--ash", action = "store_true", help="Run adaptive shrinkage (ashr)")
-parser$add_argument("--bulk", action = "store_true", help="Pseudobulk")
 parser$add_argument("--efficient", action = "store_true", help="Efficient")
 parser$add_argument("--cpus", type= "numeric", help="Number of cores", default = 8)
 
@@ -31,12 +29,13 @@ response <- args$response
 cpus <- args$cpus
 
 ash <- if(args$ash) "ash_" else ""
-bulk <- if(args$bulk) "bulk_" else ""
 eff <- if(args$efficient) "_eff" else ""
 
 print(glue("Cells: {cells}             Response: {response}           Model: {model}           Efficient: {efficient}"))
 
-dat <- fread(here(glue("data/perturb/pairs/{bulk}{cells}/{ash}{bulk}gaussian_{response}_dat{eff}.csv")))
+dat <- fread(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{cells}/{ash}gaussian_{response}_dat{eff}.csv"))
+models_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/models"
+
 
 # Make unsigned
 #dat <- dat %>% mutate(x = abs(x), y = abs(y))
@@ -81,7 +80,7 @@ fit <- brm(
   backend = "cmdstanr"
 )
 
-saveRDS(fit, here(glue("models/{bulk}{cells}/N_{ash}gaussian_{response}_{model}{eff}.rds")))
+saveRDS(fit, file.path(models_dir, glue("{cells}/{ash}gaussian_{response}_{model}{eff}.rds")))
 } else {
 fit <- brm(
   formula = formula,
@@ -93,5 +92,5 @@ fit <- brm(
   iter = 8000,
   backend = "cmdstanr"
 )
-saveRDS(fit, here(glue("models/{bulk}{cells}/N_{ash}sign_{response}_{model}{eff}.rds")))
+saveRDS(fit, file.path(models_dir, glue("{cells}/{ash}sign_{response}_{model}{eff}.rds")))
 }
