@@ -174,7 +174,19 @@ extract_DEGs <- function(DEG_files, cores=4, significant=TRUE, bulk=F, efficient
   summary_list <- list(total_perturbs = length(DEG_files))
   
   significant_perturb_effects <- mclapply(DEG_files, function(file) {
+    
+    tryCatch({
+      message("Reading file: ", file)
+    
     DEGs <- read.table(file, header = TRUE, sep = "\t", row.names = 1, check.names = FALSE)
+    
+    required_cols <- c("gene", "log2FoldChange", "padj")
+    
+    if(!all(required_cols %in% colnames(DEGs))) {
+      warning(paste("Skipping", file, "- missing required columns"))
+      return(NULL)
+    }
+
     perturbed_gene <- basename(file) %>% sub("\\.tsv$", "", .)
 
     if(ash) {
@@ -193,7 +205,11 @@ extract_DEGs <- function(DEG_files, cores=4, significant=TRUE, bulk=F, efficient
       mutate(perturbation = perturbed_gene) %>%
       rownames_to_column(var = "effect")
     return(results)
-  }, mc.cores = cores, mc.preschedule = FALSE)
+    },error = function(e) {
+       warning("Error in file ", file, ": ", conditionMessage(e))
+      return(NULL)
+    }
+  , mc.cores = cores, mc.preschedule = FALSE)
   significant_perturb_effects <- bind_rows(significant_perturb_effects)
   significant_perturb_effects <- map_ensg_to_symbol(significant_perturb_effects)
   
