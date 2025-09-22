@@ -1,4 +1,5 @@
 library(Seurat)
+library(SeuratDisk)
 library(sceasy)
 library(reticulate)
 library(tidyverse)
@@ -32,7 +33,13 @@ read_perturb_h5ad <- function(cells) {
   )
 }
 
-seurat_obj <- read_perturb_h5ad(cells)
+if(cells == "K562_GenomeWide") {
+  sceasy::convertFormat("K562_gwps_raw_singlecell.h5ad", from="anndata", to="loom", outFile="K562.loom")
+  Convert("K562.loom", dest = "h5seurat", overwrite = TRUE)
+  seurat_obj <- LoadH5Seurat("K562.h5seurat")
+} else {
+  seurat_obj <- read_perturb_h5ad(cells)
+}
 
 DEGs <- list.files(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb", cells), full.names = T)
 
