@@ -20,7 +20,7 @@ print(glue("Generating data file: Cells: {cells} Response: {response}"))
 ash <- if(args$ash) "ash_" else ""
 eff <- if(args$efficient) "_eff" else ""
 
-pairs_dir <- file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/", cells)
+pairs_dir <- file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs", cells)
 
 # Read perturb-seq pairs
 perturbation_pairs <- fread(file.path(pairs_dir, glue("{ash}perturbation_pairs{eff}.csv")))

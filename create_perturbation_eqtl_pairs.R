@@ -24,7 +24,7 @@ ash_prefix = if(ash) {"ash_"} else {""}
 efficient_suffix = if(efficient) {"_eff"} else {""}
 unfiltered_suffix = if(unfiltered) {"_all"} else {""}
 ###### PROCESS PERTURB-SEQ DEGS
-data_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/data/"
+data_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/data"
 perturb_DEG_dir <- file.path(data_dir, "perturb", cells)
 pairs_dir <- file.path(data_dir, "pairs", cells)
 perturbation_pairs_file <- file.path(pairs_dir, glue("{ash_prefix}perturbation_pairs{unfiltered_suffix}{efficient_suffix}.csv"))
