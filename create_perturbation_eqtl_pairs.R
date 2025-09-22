@@ -38,7 +38,7 @@ if(!file.exists(perturbation_pairs_file)) {
     perturbation_effect_df <- apply_ash(DEG_files, cores=16, significant=!unfiltered, bulk=TRUE)
   } else {
     results <- extract_DEGs(DEG_files,
-                            cores=16,
+                            cores=32,
                             significant=!unfiltered,
                             bulk=TRUE,
                             efficient = efficient)
