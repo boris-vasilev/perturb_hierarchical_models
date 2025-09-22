@@ -91,8 +91,7 @@ gene_QC_metrics <- function(seurat_object, pairs, expression_threshold = 0, min_
 
 gene_QC <- gene_QC_metrics(seurat_obj, pairs)
 
-
-DRGs <- read_csv(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb/pairs", cells, "perturbation_pairs_eff.csv"))
+# DRGs <- read_csv(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb/pairs", cells, "perturbation_pairs_eff.csv"))
 
 map_ensg_to_symbol <- function(gene_QC) {
   gene.ensg <- gene_QC$gene %>% unique
@@ -112,11 +111,11 @@ map_ensg_to_symbol <- function(gene_QC) {
 gene_QC <- gene_QC %>% map_ensg_to_symbol %>% filter(perturbation != effect)
 
 
-gene_QC <- left_join(
-  gene_QC,
-  DRGs,
-  by = c("perturbation", "effect")
-) %>%
-  select(perturbation, effect, n_expr_trt, n_expr_ctrl, avg_log2FC, p_val_adj)
+# gene_QC <- left_join(
+#   gene_QC,
+#   DRGs,
+#   by = c("perturbation", "effect")
+# ) %>%
+#   select(perturbation, effect, n_expr_trt, n_expr_ctrl, avg_log2FC, p_val_adj)
 
 write_csv(gene_QC, file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb_QC", cells, "gene_QC.csv"))
