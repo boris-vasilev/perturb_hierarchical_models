@@ -8,14 +8,14 @@ library(broom)
 supported_models <- c("varying_intercept_varying_slope",
                       "no_pooling_intercept_varying_slope",
                       "varying_intercept_fixed_slope",
-		      "vivs_student")
+		                  "vivs_student")
 
 parser <- ArgumentParser()
 parser$add_argument("--cells", type = "character", help = "Cell type/line", required = TRUE)
 parser$add_argument("--model", type = "character", help = "Model type", required = TRUE, choices = supported_models)
 
 parser$add_argument("--ash", action = "store_true", help="Run adaptive shrinkage (ashr)")
-parser$add_argument("--bulk", action = "store_true", help="Pseudobulk")
+# parser$add_argument("--bulk", action = "store_true", help="Pseudobulk")
 parser$add_argument("--efficient", action = "store_true", help="Efficient perturbations >70% only")
 
 args <- parser$parse_args()
@@ -24,14 +24,14 @@ model <- args$model
 efficient <- args$efficient
 
 ash <- if(args$ash) "ash_" else ""
-bulk <- if(args$bulk) "bulk_" else ""
+# bulk <- if(args$bulk) "bulk_" else ""
 eff <- if(args$efficient) "_eff" else ""
 
 print(glue("Cells: {cells}            Model: {model}           Efficient: {efficient} "))
-dat <- read_csv(here(glue("data/perturb/pairs/{bulk}{cells}/{ash}{bulk}logit_dat{eff}.csv")))
-fit <- readRDS(here(glue("models/{bulk}{cells}/logit_{model}{eff}.rds")))
+dat <- read_csv(here(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{cells}/{ash}logit_dat{eff}.csv")))
+fit <- readRDS(here(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/{ash}logit_{model}{eff}.rds")))
 
-png(here(glue("plots/{bulk}{cells}/traceplot_logit_{model}.png")), width= 1000, height = 1000)
+png(here(glue("plots/{cells}/traceplot_logit_{model}.png")), width= 1000, height = 1000)
 plot(fit)
 dev.off()
 
@@ -77,7 +77,7 @@ p1 <-
   coord_cartesian(xlim = range(params$Intercept),
                   ylim = range(params$Slope))
 
-png(here(glue("plots/{bulk}{cells}/logit_parameter_shrinkage_{model}.png")), width = 1080, height = 1080)
+png(here(glue("plots/{cells}/logit_parameter_shrinkage_{model}.png")), width = 1080, height = 1080)
 p1 + theme_bw() + theme(text = element_text(size = 20))
 dev.off()
 
@@ -100,7 +100,7 @@ p <- ggplot(partially_pooled_intercepts.confidence, aes(x = perturb, y = Estimat
   geom_hline(yintercept = 0, color = "red", linetype = "dashed")
   #coord_flip()
 
-png(here(glue("plots/{bulk}{cells}/logit_{model}_intercepts.png")), width = 3080, height = 1080)
+png(here(glue("plots/{cells}/logit_{model}_intercepts.png")), width = 3080, height = 1080)
 p + theme_void() + theme(text = element_text(size = 10), axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 
@@ -115,7 +115,7 @@ p <- ggplot(partially_pooled_intercepts.significant, aes(x = perturb, y = Estima
   geom_hline(yintercept = 0, color = "red", linetype = "dashed")
   #coord_flip()
 
-png(here(glue("plots/{bulk}{cells}/logit_{model}_intercepts_significant.png")), width = 580, height = 580)
+png(here(glue("plots/{cells}/logit_{model}_intercepts_significant.png")), width = 580, height = 580)
 p + theme_bw() + theme(text = element_text(size = 10), axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 
@@ -126,7 +126,7 @@ p <- ggplot(partially_pooled_slopes.confidence, aes(x = perturb, y = Estimate)) 
   geom_hline(yintercept = 0, color = "red", linetype = "dashed")
   #coord_flip()
 
-png(here(glue("plots/{bulk}{cells}/logit_{model}_slopes.png")), width = 3080, height = 1080)
+png(here(glue("plots/{cells}/logit_{model}_slopes.png")), width = 3080, height = 1080)
 p + theme_void() + theme(text = element_text(size = 10), axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 
@@ -140,7 +140,7 @@ p <- ggplot(partially_pooled_slopes.significant, aes(x = perturb, y = Estimate))
   geom_hline(yintercept = 0, color = "red", linetype = "dashed")
   #coord_flip()
 
-png(here(glue("plots/{bulk}{cells}/logit_{model}_slopes_significant.png")), width = 580, height = 580)
+png(here(glue("plots/{cells}/logit_{model}_slopes_significant.png")), width = 580, height = 580)
 p + theme_bw() + theme(text = element_text(size = 10), axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 
