@@ -23,6 +23,8 @@ read_perturb_h5ad <- function(cells) {
     h5ad_file_name <- "jurkat_raw_singlecell_01.h5ad"
   } else if(cells == "K562_GenomeWide") {
     h5ad_file_name <- "K562_gwps_raw_singlecell.h5ad"
+  } else if(cells == "K562_essential") {
+    h5ad_file_name <- "K562_essential_raw_singlecell_01.h5ad"
   } else if(cells == "HepG2") {
     h5ad_file_name <- "hepg2_raw_singlecell_01.h5ad"
   } else if(cells == "RPE1") {
@@ -42,7 +44,8 @@ seurat_obj <- read_perturb_h5ad(cells)
 
 DEGs <- list.files(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb", cells), full.names = T)
 
-pairs <- extract_DEGs(DEGs, cores = 32, bulk=T)$perturbation_effect_df %>%
+# significant=FALSE -- generate QC for ALL perturbation-DEG pairs
+pairs <- extract_DEGs(DEGs, cores = 32, bulk=T, significant=FALSE)$perturbation_effect_df %>%
   select(perturbation, effect_ensg)
 
 gene_QC_metrics <- function(seurat_object, pairs, expression_threshold = 0, min_cells = 7) {
