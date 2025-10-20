@@ -80,6 +80,7 @@ OUT_DIR.mkdir(exist_ok=True, parents=True)
 h5ad_files = {
     "Jurkat": "jurkat_raw_singlecell_01.h5ad",
     "K562_GenomeWide": "K562_gwps_raw_singlecell.h5ad",
+    "K562_essential": "K562_essential_raw_singlecell_01.h5ad",
     "HepG2": "hepg2_raw_singlecell_01.h5ad",
     "RPE1": "rpe1_raw_singlecell_01.h5ad"
 }
