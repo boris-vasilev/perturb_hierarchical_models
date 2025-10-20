@@ -45,7 +45,7 @@ seurat_obj <- read_perturb_h5ad(cells)
 DEGs <- list.files(file.path("/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb", cells), full.names = T)
 
 # significant=FALSE -- generate QC for ALL perturbation-DEG pairs
-pairs <- extract_DEGs(DEGs, cores = 32, bulk=T, significant=FALSE)$perturbation_effect_df %>%
+pairs <- extract_DEGs(DEGs, cores = 32, bulk=T, significant=FALSE, efficient = FALSE)$perturbation_effect_df %>%
   select(perturbation, effect_ensg)
 
 gene_QC_metrics <- function(seurat_object, pairs, expression_threshold = 0, min_cells = 7) {
