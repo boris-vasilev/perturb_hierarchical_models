@@ -99,7 +99,7 @@ if 'gene' not in adata.obs:
 # -----------------------------
 # Assumes you have an equivalent extract_DEGs output as CSVs in PERTURB_DIR
 DEG_dir = f"/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb/{cells}"
-pairs = extract_DEGs(DEG_dir, significant=True, bulk=True)
+pairs = extract_DEGs(DEG_dir, significant=False, bulk=True)
 pairs = map_ensg_to_symbol(pairs)
 
 
