@@ -20,7 +20,7 @@ map_ensg_to_symbol <- function(perturbation_effect_df) {
   return(perturbation_effect_df)
 }
 
-filter_efficient_perturbations <- function(perturbation_effect_df) {
+filter_efficient_perturbations <- function(perturbation_effect_df, kd_eff = 0.7) {
   has_self_effect <- perturbation_effect_df %>%
     filter(effect == perturbation) %>%
     pull(perturbation) %>%
