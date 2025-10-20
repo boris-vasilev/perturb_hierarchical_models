@@ -31,7 +31,7 @@ filter_efficient_perturbations <- function(perturbation_effect_df, kd_eff = 0.7)
 
   # Strong knockdown over kd_eff efficiency.
   # 70% efficiency means the fold change of the treatment group is 30% i.e. 1 - kd_eff
-  strong_self_effects <- perturbation_effect_df %>%
+  strong_knockdown <- perturbation_effect_df %>%
     filter(effect == perturbation,
             avg_log2FC < log2(1 - kd_eff),
             p_val_adj < 0.05) %>%
