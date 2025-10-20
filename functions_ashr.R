@@ -21,13 +21,24 @@ map_ensg_to_symbol <- function(perturbation_effect_df) {
 }
 
 filter_efficient_perturbations <- function(perturbation_effect_df) {
-  # Perturbations where self-effect is significantly downregulated (< 30% expression)
-  strong_self_effects <- perturbation_effect_df %>%
+  has_self_effect <- perturbation_effect_df %>%
     filter(effect == perturbation) %>%
-    mutate(percent_change = (2^avg_log2FC - 1)) %>%
-    filter(percent_change < -0.7 & p_val_adj < 0.05) %>% 
-    pull(perturbation)
-  valid_perturbations <- strong_self_effects
+    pull(perturbation) %>%
+    unique()
+    
+  # Undetected target expression is an efficient perturbation (100%)
+  undetected <- setdiff(unique(perturbation_effect_df$perturbation), has_self_effect)
+
+  # Strong knockdown over kd_eff efficiency.
+  # 70% efficiency means the fold change of the treatment group is 30% i.e. 1 - kd_eff
+  strong_self_effects <- perturbation_effect_df %>%
+    filter(effect == perturbation,
+            avg_log2FC < log2(1 - kd_eff),
+            p_val_adj < 0.05) %>%
+      pull(perturbation) %>%
+      unique()
+  
+  valid_perturbations <- union(strong_knockdown, undetected)
 
   perturbation_effect_df <- perturbation_effect_df %>%
     filter(perturbation %in% valid_perturbations)
