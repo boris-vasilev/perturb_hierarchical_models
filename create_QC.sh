@@ -2,6 +2,8 @@
 . /etc/profile.d/modules.sh
 module load gcc/11
 
+source ~/.bashrc
+
 conda activate env_nf
 
 python QC.py --cells Jurkat
