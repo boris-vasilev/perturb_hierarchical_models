@@ -148,7 +148,8 @@ mg = mygene.MyGeneInfo()
 symbols = mg.querymany(gene_QC['gene'].unique(), scopes='ensembl.gene', fields='symbol', species='human')
 symbol_map = {s['query']: s.get('symbol', None) for s in symbols}
 gene_QC['effect'] = gene_QC['gene'].map(symbol_map)
-gene_QC = gene_QC[gene_QC['perturbation'] != gene_QC['effect']]
+# Don't filter perturbation == effect. Won't be able to estimate KD efficiency
+# gene_QC = gene_QC[gene_QC['perturbation'] != gene_QC['effect']]
 
 # -----------------------------
 # SAVE RESULTS

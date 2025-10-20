@@ -2,7 +2,10 @@
 . /etc/profile.d/modules.sh
 module load gcc/11
 
-#Rscript QC.R --cells Jurkat
-#Rscript QC.R --cells HepG2
-Rscript QC.R --cells K562_GenomeWide
-#Rscript QC.R --cells RPE1
+conda activate env_nf
+
+python QC.py --cells Jurkat
+python QC.py --cells HepG2
+python QC.py --cells K562_GenomeWide
+python QC.py --cells K562_essential
+python QC.py --cells RPE1
