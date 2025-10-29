@@ -6,7 +6,7 @@ library(argparse)
 source("functions_create_perturb_df.R")
 
 parser <- ArgumentParser()
-parser$add_argument("--cores", type = "numeric", help = "Number of cores", required = TRUE)=
+parser$add_argument("--cores", type = "numeric", help = "Number of cores", required = TRUE)
 
 args <- parser$parse_args()
 
