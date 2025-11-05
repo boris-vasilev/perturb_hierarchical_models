@@ -28,7 +28,12 @@ ash <- if(args$ash) "ash_" else ""
 eff <- if(args$efficient) "_eff" else ""
 
 print(glue("Cells: {cells}            Model: {model}           Efficient: {efficient} "))
-dat <- read_csv(here(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{cells}/{ash}logit_dat{eff}.csv")))
+dat <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat.csv") %>%
+  filter(screen == cells, perturb_eff >= 0.7) %>%
+  select(perturb, effect, x, y) %>%
+  group_by(perturb) %>%
+  filter(any(x == 1 & y == 1)) %>%
+  ungroup
 fit <- readRDS(here(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/{ash}logit_{model}{eff}.rds")))
 
 png(here(glue("plots/{cells}/traceplot_logit_{model}.png")), width= 1000, height = 1000)
