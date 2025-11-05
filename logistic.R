@@ -43,7 +43,8 @@ dat <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat.csv") %>%
   filter(screen == cells, perturb_eff >= 0.7) %>%
   select(perturb, effect, x, y) %>%
   group_by(perturb) %>%
-  filter(any(x == 1 & y == 1)) %>%
+  filter(any(x == 1)) %>%
+  filter(any(y == 1)) %>%
   ungroup
 
 # Fit logistic regression

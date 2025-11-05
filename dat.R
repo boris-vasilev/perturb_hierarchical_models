@@ -31,11 +31,45 @@ base_expression_files <- setNames(file.path(QC_dir, cells, "base_expression.csv"
 gene_QC <- mclapply(gene_QC_files, fread, mc.cores = length(cells))
 base_expressions <- mclapply(base_expression_files, fread, mc.cores = length(cells))
 
+track_log <- function(df, label, cell = NA, log_file) {
+  n_pairs <- nrow(df)
+  n_perturbs <- if ("perturb" %in% names(df)) length(unique(df$perturb)) else NA
+  n_effects <- if ("effect" %in% names(df)) length(unique(df$effect)) else NA
+  
+  entry <- data.frame(
+    step = label,
+    cell = cell,
+    n_pairs = n_pairs,
+    n_perturbs = n_perturbs,
+    n_effects = n_effects,
+    timestamp = format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  )
+  
+  # Append or create
+  if (!file.exists(log_file)) {
+    fwrite(entry, log_file)
+  } else {
+    fwrite(entry, log_file, append = TRUE)
+  }
+  
+  message(sprintf("[%s | %s] %d pairs | %d perturbs | %d effects", 
+                  label, ifelse(is.na(cell), "all", cell), n_pairs, n_perturbs, n_effects))
+  
+  invisible(df)
+}
+
+log_file <- file.path(pairs_dir, "progress_log.csv")
+if (file.exists(log_file)) file.remove(log_file)
+
+
 # Select perturbation-gene pairs that pass QC (> 7 expressing cells in perturb and control groups)
-QC_pairs_pass <- mclapply(gene_QC, function(QC) {
-  QC %>%
+QC_pairs_pass <- mclapply(names(gene_QC), function(cell) {
+  QC <- gene_QC[[cell]]
+  df <- QC %>%
     filter(n_expr_trt > 7,  n_expr_ctrl > 7) %>%
     select(perturbation, gene, effect)
+  track_log(df, "QC passed pairs", cell, log_file)
+  df
 }, mc.cores = length(cells))
 
 
@@ -102,12 +136,16 @@ results_per_cell <- mclapply(seq_along(cell_DEG_files), function(i) {
   perturb_effects <- Filter(Negate(is.null), perturb_effects)  # remove NULLs
   if (length(perturb_effects) == 0) return(NULL)
 
-  bind_rows(perturb_effects)
+  df <- bind_rows(perturb_effects)
+  track_log(df, "Processed DEGs (after QC)", cell, log_file)
+  df
 }, mc.cores = length(cells))
 
 names(results_per_cell) <- cells
 
 perturb_summary_stats <- rbindlist(results_per_cell)
+
+track_log(perturb_summary_stats, "Combined DEGs across all cells", NA, log_file)
 
 ####### PROCESS EQTLS
 ### -- Load and filter cis-eQTLs -- ###
