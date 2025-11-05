@@ -47,10 +47,10 @@ fit <- brm(
   formula = formula,
   data = dat,
   family = bernoulli(link = "logit"),
-#  threads = threading(2),
+  threads = threading(4),
   chains = 8,
   cores = 8,
-  iter = 2000,
+  iter = 1000,
   backend = "cmdstanr"
 )
 
