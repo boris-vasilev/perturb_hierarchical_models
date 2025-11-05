@@ -13,7 +13,6 @@ supported_models <- c("varying_intercept_varying_slope",
 parser <- ArgumentParser()
 parser$add_argument("--cells", type = "character", help = "Cell type/line", required = TRUE)
 parser$add_argument("--model", type = "character", help = "Model type", required = TRUE, choices = supported_models)
-parser$add_argument("--ash", action = "store_true", help="Run adaptive shrinkage (ashr)")
 parser$add_argument("--efficient", action = "store_true", help="Efficient perturbations >70% only")
 
 args <- parser$parse_args()
@@ -21,7 +20,6 @@ cells <- args$cells
 model <- args$model
 efficient <- args$efficient
 
-ash <- if(args$ash) "ash_" else ""
 eff <- if(args$efficient) "_eff" else ""
 
 print(glue("Cells: {cells}            Model: {model}           Efficient: {efficient} "))
@@ -41,17 +39,23 @@ if (model == "varying_intercept_varying_slope") {
 
 cmdstanr::set_cmdstan_path("/home/biv22/rds/hpc-work/.cmdstan/cmdstan-2.36.0")
 
-dat <- fread(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{cells}/{ash}logit_dat{eff}.csv"))
+dat <- fread(glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat.csv")) %>%
+  filter(screen == cells) %>%
+  select(perturb, effect, x, y) %>%
+  group_by(perturb) %>%
+  filter(any(x == 1 & y == 1)) %>%
+  ungroup
+
 # Fit logistic regression
 fit <- brm(
   formula = formula,
   data = dat,
   family = bernoulli(link = "logit"),
   threads = threading(4),
-  chains = 8,
-  cores = 8,
-  iter = 1000,
+  chains = 6,
+  cores = 6,
+  iter = 2000,
   backend = "cmdstanr"
 )
 
-saveRDS(fit, glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/{ash}logit_{model}{eff}.rds"))
+saveRDS(fit, glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/logit_{model}{eff}.rds"))
