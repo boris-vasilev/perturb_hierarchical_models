@@ -30,10 +30,11 @@ adjust_MAF <- function(eqtl_dt) {
 calculate_eQTL_beta <- function(eqtl_dt) {
   eqtl_dt <- adjust_MAF(eqtl_dt)
 
-  # Compute beta
-  eqtl_dt[, Beta := Zscore / sqrt(2 * MAF * (1 - MAF) * (NrSamples + Zscore^2))]
+  # Compute beta and SE
+  eqtl_dt[, SE := 1 / sqrt(2 * MAF * (1 - MAF) * (NrSamples + Zscore^2))]
+  eqtl_dt[, Beta := Zscore * SE]
 
   # Return with useful columns
-  return(eqtl_dt[, .(SNP, GeneSymbol, Pvalue, FDR, Beta)])
+  return(eqtl_dt[, .(SNP, GeneSymbol, Pvalue, FDR, Beta, SE)])
 }
 
