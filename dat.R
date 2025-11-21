@@ -78,9 +78,11 @@ results_per_cell <- mclapply(seq_along(cell_DEG_files), function(i) {
       DEGs <- merge(DEGs, base_exp, by.x = "gene", by.y = "gene_id", all.x = TRUE)
 
       pert_eff_value <- DEGs$log2FoldChange[DEGs$effect == perturbed_gene]
+      pert_eff_se <- DEGs$lfcSE[DEGs$effect == perturbed_gene]
       # pert_eff_value <- 1 - 2^(DEGs$log2FoldChange[DEGs$effect == perturbed_gene])
       # if (length(pert_eff_value) == 0) pert_eff_value <- 1
       DEGs$perturb_eff <- pert_eff_value
+      DEGs$pert_eff_se <- pert_eff_se
 
       data.frame(
         perturb = perturbed_gene,
@@ -93,6 +95,7 @@ results_per_cell <- mclapply(seq_along(cell_DEG_files), function(i) {
         base_DESeq2 = DEGs$base_deseq2,
         base_log1p_DESeq2 = DEGs$log1p_base_deseq2,
         perturb_eff = DEGs$perturb_eff,
+        perturb_eff_se = DEGs$perturb_eff_se,
         logFC = DEGs$log2FoldChange,
         lfcSE = DEGs$lfcSE,
         padj = DEGs$padj,
