@@ -94,6 +94,7 @@ results_per_cell <- mclapply(seq_along(cell_DEG_files), function(i) {
         base_log1p_DESeq2 = DEGs$log1p_base_deseq2,
         perturb_eff = DEGs$perturb_eff,
         logFC = DEGs$log2FoldChange,
+        lfcSE = DEGs$lfcSE,
         padj = DEGs$padj,
         x = ifelse(DEGs$padj < 0.05, 1, 0),
         # ash_logFC = ash_fit$result$PosteriorMean,
