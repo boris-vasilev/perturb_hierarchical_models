@@ -34,7 +34,7 @@ base_expressions <- mclapply(base_expression_files, fread, mc.cores = length(cel
 # Select perturbation-gene pairs that pass QC (> 7 expressing cells in perturb and control groups)
 QC_pairs_pass <- mclapply(gene_QC, function(QC) {
   QC %>%
-    filter(n_expr_trt > 7,  n_expr_ctrl > 7) %>%
+    filter(n_expr_trt > 3,  n_expr_ctrl > 3) %>%
     select(perturbation, gene, effect)
 }, mc.cores = length(cells))
 
