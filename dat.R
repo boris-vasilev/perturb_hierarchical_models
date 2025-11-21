@@ -82,7 +82,7 @@ results_per_cell <- mclapply(seq_along(cell_DEG_files), function(i) {
       # pert_eff_value <- 1 - 2^(DEGs$log2FoldChange[DEGs$effect == perturbed_gene])
       # if (length(pert_eff_value) == 0) pert_eff_value <- 1
       DEGs$perturb_eff <- pert_eff_value
-      DEGs$pert_eff_se <- pert_eff_se
+      DEGs$perturb_eff_se <- pert_eff_se
 
       data.frame(
         perturb = perturbed_gene,
