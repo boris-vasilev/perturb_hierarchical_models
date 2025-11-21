@@ -77,8 +77,9 @@ results_per_cell <- mclapply(seq_along(cell_DEG_files), function(i) {
       # Add baseline expression estimates (mean UMI/cell, DESeq2 median-of-ratios, and CPM, + log1p transformed versions)
       DEGs <- merge(DEGs, base_exp, by.x = "gene", by.y = "gene_id", all.x = TRUE)
 
-      pert_eff_value <- 1 - 2^(DEGs$log2FoldChange[DEGs$effect == perturbed_gene])
-      if (length(pert_eff_value) == 0) pert_eff_value <- 1
+      pert_eff_value <- DEGs$log2FoldChange[DEGs$effect == perturbed_gene]
+      # pert_eff_value <- 1 - 2^(DEGs$log2FoldChange[DEGs$effect == perturbed_gene])
+      # if (length(pert_eff_value) == 0) pert_eff_value <- 1
       DEGs$perturb_eff <- pert_eff_value
 
       data.frame(
