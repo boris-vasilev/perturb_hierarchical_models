@@ -1,3 +1,5 @@
+#!/usr/bin/Rscript
+
 library(argparse)
 library(glue)
 library(tidyverse)
