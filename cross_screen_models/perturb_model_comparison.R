@@ -66,7 +66,7 @@ fit.no_me <- mod.no_me$sample(
   seed = 123
 )
 
-saveRDS(fit.no_me, glue("{fitted_dir}/{perturb}_no_me.RDS"))
+saveRDS(fit.no_me, glue("{fitted_dir}/{i}_no_me.RDS"))
 ####################### MODEL 2: ME ON J #######################
 
 stan_data.me_j <- list(
@@ -88,7 +88,7 @@ fit.me_j <- mod.me_j$sample(
   seed = 123
 )
 
-saveRDS(fit.me_j, glue("{fitted_dir}/{perturb}_me_j.RDS"))
+saveRDS(fit.me_j, glue("{fitted_dir}/{i}_me_j.RDS"))
 
 ####################### MODEL 3: FULL ME #######################
 
@@ -116,4 +116,4 @@ fit.me_both <- mod.me_both$sample(
   seed = 123
 )
 
-saveRDS(fit_me_both, glue("{fitted_dir}/{perturb}_full_me.RDS"))
+saveRDS(fit_me_both, glue("{fitted_dir}/{i}_full_me.RDS"))
