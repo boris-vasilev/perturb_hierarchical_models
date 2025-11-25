@@ -59,16 +59,18 @@ stan_data.no_me <- list(
 
 mod.no_me <- cmdstan_model(file.path(models_dir, "single_gene_no_me.stan"))
 
-fit.no_me <- mod.no_me$sample(
-  data = stan_data.no_me,
-  chains = 4,
-  parallel_chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1000,
-  seed = 123
-)
+if(!file.exists("{fitted_dir}/{i}_no_me.RDS")) {
+  fit.no_me <- mod.no_me$sample(
+    data = stan_data.no_me,
+    chains = 4,
+    parallel_chains = 4,
+    iter_warmup = 1000,
+    iter_sampling = 1000,
+    seed = 123
+  )
+  saveRDS(fit.no_me, glue("{fitted_dir}/{i}_no_me.RDS"))
+}
 
-saveRDS(fit.no_me, glue("{fitted_dir}/{i}_no_me.RDS"))
 ####################### MODEL 2: ME ON J #######################
 
 stan_data.me_j <- list(
@@ -81,16 +83,18 @@ stan_data.me_j <- list(
 
 mod.me_j <- cmdstan_model(file.path(models_dir, "single_gene_me_j.stan"))
 
-fit.me_j <- mod.me_j$sample(
-  data = stan_data.me_j,
-  chains = 4,
-  parallel_chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1000,
-  seed = 123
-)
+if(!file.exists("{fitted_dir}/{i}_me_j.RDS")) {
+  fit.me_j <- mod.me_j$sample(
+    data = stan_data.me_j,
+    chains = 4,
+    parallel_chains = 4,
+    iter_warmup = 1000,
+    iter_sampling = 1000,
+    seed = 123
+  )
 
-saveRDS(fit.me_j, glue("{fitted_dir}/{i}_me_j.RDS"))
+  saveRDS(fit.me_j, glue("{fitted_dir}/{i}_me_j.RDS"))
+}
 
 ####################### MODEL 3: FULL ME #######################
 
@@ -108,14 +112,15 @@ stan_data.me_both <- list(
   beta_i_obs    = beta_i_obs,
   se_beta_i     = se_beta_i
 )
+if(!file.exists("{fitted_dir}/{i}_full_me.RDS")) {
+  fit.me_both <- mod.me_both$sample(
+    data = stan_data.me_both,
+    chains = 4,
+    parallel_chains = 4,
+    iter_warmup = 1000,
+    iter_sampling = 1000,
+    seed = 123
+  )
 
-fit.me_both <- mod.me_both$sample(
-  data = stan_data.me_both,
-  chains = 4,
-  parallel_chains = 4,
-  iter_warmup = 1000,
-  iter_sampling = 1000,
-  seed = 123
-)
-
-saveRDS(fit.me_both, glue("{fitted_dir}/{i}_full_me.RDS"))
+  saveRDS(fit.me_both, glue("{fitted_dir}/{i}_full_me.RDS"))
+}
