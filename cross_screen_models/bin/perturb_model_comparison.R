@@ -57,9 +57,9 @@ stan_data.no_me <- list(
   y    = dat_i$scaled_logFC
 )
 
-mod.no_me <- cmdstan_model(file.path(models_dir, "single_gene_no_me.stan"))
 
 if(!file.exists("{fitted_dir}/{i}_no_me.RDS")) {
+  mod.no_me <- cmdstan_model(file.path(models_dir, "single_gene_no_me.stan"))
   fit.no_me <- mod.no_me$sample(
     data = stan_data.no_me,
     chains = 4,
@@ -81,9 +81,9 @@ stan_data.me_j <- list(
   se_y    = dat_i$scaled_SE
 )
 
-mod.me_j <- cmdstan_model(file.path(models_dir, "single_gene_me_j.stan"))
 
 if(!file.exists("{fitted_dir}/{i}_me_j.RDS")) {
+  mod.me_j <- cmdstan_model(file.path(models_dir, "single_gene_me_j.stan"))
   fit.me_j <- mod.me_j$sample(
     data = stan_data.me_j,
     chains = 4,
@@ -98,9 +98,6 @@ if(!file.exists("{fitted_dir}/{i}_me_j.RDS")) {
 
 ####################### MODEL 3: FULL ME #######################
 
-
-mod.me_both <- cmdstan_model(file.path(models_dir, "single_gene_full_me.stan"))
-
 stan_data.me_both <- list(
   N       = N,
   J       = J,
@@ -113,6 +110,7 @@ stan_data.me_both <- list(
   se_beta_i     = se_beta_i
 )
 if(!file.exists("{fitted_dir}/{i}_full_me.RDS")) {
+  mod.me_both <- cmdstan_model(file.path(models_dir, "single_gene_full_me.stan"))
   fit.me_both <- mod.me_both$sample(
     data = stan_data.me_both,
     chains = 4,
