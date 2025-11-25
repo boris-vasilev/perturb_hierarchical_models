@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 params.perturbList = '/Users/borisvasilev/PhD/perturb_hierarchical_models/cross_screen_models/perturblist'
 
 process FIT_CROSS_SCREEN_MODELS {
-  time '45m'
+  time '2h'
   cpus 4
 
   input:
