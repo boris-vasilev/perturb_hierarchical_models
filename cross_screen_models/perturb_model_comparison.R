@@ -13,7 +13,7 @@ i <- args$perturb
 set_cmdstan_path("/home/biv22/rds/hpc-work/.cmdstan/cmdstan-2.36.0")
 
 models_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/models"
-output_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fitted"
+fitted_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fitted"
 
 dat <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat.csv")
 
