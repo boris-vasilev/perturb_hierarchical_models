@@ -12,6 +12,8 @@ parser$add_argument("--perturb", type = "character", required = TRUE)
 args <- parser$parse_args()
 i <- args$perturb
 
+print(glue("Fitting models for {i}"))
+
 set_cmdstan_path("/home/biv22/rds/hpc-work/.cmdstan/cmdstan-2.36.0")
 
 models_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/models"
@@ -57,8 +59,8 @@ stan_data.no_me <- list(
   y    = dat_i$scaled_logFC
 )
 
-
 if(!file.exists("{fitted_dir}/{i}_no_me.RDS")) {
+  print(glue("NO ME model for {i}"))
   mod.no_me <- cmdstan_model(file.path(models_dir, "single_gene_no_me.stan"))
   fit.no_me <- mod.no_me$sample(
     data = stan_data.no_me,
@@ -83,6 +85,7 @@ stan_data.me_j <- list(
 
 
 if(!file.exists("{fitted_dir}/{i}_me_j.RDS")) {
+  print(glue("ME ON J model for {i}"))
   mod.me_j <- cmdstan_model(file.path(models_dir, "single_gene_me_j.stan"))
   fit.me_j <- mod.me_j$sample(
     data = stan_data.me_j,
@@ -110,6 +113,7 @@ stan_data.me_both <- list(
   se_beta_i     = se_beta_i
 )
 if(!file.exists("{fitted_dir}/{i}_full_me.RDS")) {
+  print(glue("FULL ME model for {i}"))
   mod.me_both <- cmdstan_model(file.path(models_dir, "single_gene_full_me.stan"))
   fit.me_both <- mod.me_both$sample(
     data = stan_data.me_both,
