@@ -118,4 +118,4 @@ fit.me_both <- mod.me_both$sample(
   seed = 123
 )
 
-saveRDS(fit_me_both, glue("{fitted_dir}/{i}_full_me.RDS"))
+saveRDS(fit.me_both, glue("{fitted_dir}/{i}_full_me.RDS"))
