@@ -8,7 +8,7 @@ parser <- ArgumentParser()
 parser$add_argument("--perturb", type = "character", required = TRUE)
 
 args <- parser$parse_args()
-perturb <- args$perturb
+i <- args$perturb
 
 set_cmdstan_path("/home/biv22/rds/hpc-work/.cmdstan/cmdstan-2.36.0")
 
@@ -18,7 +18,7 @@ output_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cr
 dat <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat.csv")
 
 dat_i <- dat %>%
-  filter(perturb == perturb) %>%
+  filter(perturb == i) %>%
   drop_na(logFC, lfcSE, perturb_eff, perturb_eff_se, screen, effect) %>%
   mutate(
     scaled_logFC = logFC / perturb_eff,
