@@ -169,8 +169,37 @@ message("LOO computed for all models.\n")
 message("=== Extracting parameter summaries ===")
 
 extract_params <- function(fit) {
-  draws <- fit$draws(c("mu_delta", "tau", "sigma", "sigma_pert"), format="df")
-  summarise_all(draws, median)
+
+  # Parameters actually present in this model
+  available <- fit$metadata()$model_params
+
+  # Base parameters (always present)
+  base_params <- c("mu_delta", "tau")
+
+  # Detect which sigma-like parameter exists
+  sigma_param <- intersect(c("sigma", "sigma_pert"), available)
+
+  # Parameters to extract
+  to_extract <- c(base_params, sigma_param)
+
+  # Extract only available parameters
+  draws <- fit$draws(to_extract, format = "df")
+
+  # Summaries
+  out <- draws %>% summarise(across(everything(), median))
+
+  # Rename sigma_pert or sigma → sigma
+  if (length(sigma_param) == 1) {
+    out <- out %>% rename(sigma = all_of(sigma_param))
+  } else {
+    # if neither is present (should not happen), fill NA
+    out$sigma <- NA_real_
+  }
+
+  # Ensure final column order
+  out <- out[, c("mu_delta", "tau", "sigma")]
+
+  return(out)
 }
 
 params_list <- mclapply(fits_table$fit, extract_params, mc.cores = cores)
