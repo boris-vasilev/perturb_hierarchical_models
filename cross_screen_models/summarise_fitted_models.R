@@ -3,6 +3,7 @@ library(cmdstanr)
 library(posterior)
 library(loo)
 library(argparse)
+library(parallel)
 
 parser <- ArgumentParser()
 parser$add_argument("--cores", type = "numeric", required = TRUE)
@@ -24,6 +25,11 @@ message("Listing files in ", fitted_dir)
 files <- list.files(fitted_dir, full.names = TRUE, pattern = "\\.RDS$")
 message("Found ", length(files), " fitted model files.")
 
+
+fits <- mclapply(files, function(file){
+  message("Reading ", file)
+  readRDS(file)
+  }, mc.cores=cores)
 message("Loading fits into memory...")
 
 fits_table <- tibble(
@@ -38,10 +44,7 @@ fits_table <- tibble(
       grepl("no_me\\.RDS$",   filename) ~ "no_me",
       TRUE ~ NA_character_
     ),
-    fit = map(file, ~{
-      message("  • Loading ", .x)
-      readRDS(.x)
-    })
+    fit = fits
   )
 
 message("All fits loaded successfully.\n")
