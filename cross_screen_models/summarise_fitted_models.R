@@ -3,6 +3,7 @@ library(cmdstanr)
 library(posterior)
 library(loo)
 library(argparse)
+library(parallel)
 
 message("=== Starting model diagnostics pipeline ===")
 
@@ -24,8 +25,9 @@ message("Listing files in ", fitted_dir)
 
 files <- list.files(fitted_dir, full.names = TRUE, pattern = "\\.RDS$")
 message("Found ", length(files), " fitted model files.")
-
 message("Loading fits into memory...")
+
+fits <- mclapply(files, readRDS, mc.cores = cores)
 
 fits_table <- tibble(
   file = files,
@@ -39,10 +41,7 @@ fits_table <- tibble(
       grepl("no_me\\.RDS$",   filename) ~ "no_me",
       TRUE ~ NA_character_
     ),
-    fit = map(file, ~{
-      message("  • Loading ", .x)
-      readRDS(.x)
-    })
+    fit = fits
   )
 
 message("All fits loaded successfully.\n")
@@ -66,8 +65,10 @@ extract_diags <- function(fit) {
   )
 }
 
+diag_list <- mclapply(fits_table$fit, extract_diags, mc.cores = cores)
+
 diag_table <- fits_table %>%
-  mutate(diag = map(fit, extract_diags)) %>%
+  mutate(diag = diag_list) %>%
   unnest(diag)
 
 message("Convergence diagnostics computed for all models.\n")
@@ -120,8 +121,10 @@ ppc_summary <- function(fit, y_obs_varname = "y", yrep_varname = "y_rep") {
   )
 }
 
+ppc_list <- mclapply(fits_table$fit, ppc_summary, mc.cores = cores)
+
 ppc_table <- fits_table %>%
-  mutate(ppc = map(fit, ppc_summary)) %>%
+  mutate(ppc = ppc_list) %>%
   unnest(ppc)
 
 ppc_summary_by_model <- ppc_table %>%
@@ -147,12 +150,11 @@ compute_loo <- function(fit) {
   loo::loo(ll)
 }
 
+loo_list <- mclapply(fits_table$fit, compute_loo, mc.cores = cores)
+
 # LOO can be slow — print progress
 loo_table <- fits_table %>%
-  mutate(loo = map(fit, ~{
-    message("  • Computing LOO for ", .x$metadata()$model_name)
-    compute_loo(.x)
-  }))
+  mutate(loo = loo_list)
 
 loo_compare_table <- loo_table %>%
   select(perturb, model_type, loo) %>%
@@ -171,8 +173,10 @@ extract_params <- function(fit) {
   summarise_all(draws, median)
 }
 
+params_list <- mclapply(fits_table$fit, extract_params, mc.cores = cores)
+
 params_table <- fits_table %>%
-  mutate(params = map(fit, extract_params)) %>%
+  mutate(params = params_list) %>%
   unnest(params)
 
 message("Parameter summaries extracted.\n")
@@ -184,10 +188,14 @@ message("Parameter summaries extracted.\n")
 output_file <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fit_summary.csv"
 
 message("Saving model summary to: ", output_file)
-write_csv(bind_cols(fits_table %>% select(perturb, model_type),
-                    diag_table %>% select(-file, -filename, -fit),
-                    ppc_table %>% select(-fit),
-                    params_table %>% select(-fit)), 
-          output_file)
+
+summary_table <- fits_table %>%
+  select(perturb, model_type) %>%
+  bind_cols(
+    diag_table %>% select(-fit, -file, -filename),
+    ppc_table %>% select(-fit),
+    params_table %>% select(-fit)
+  )
+write_csv(summary_table, output_file)
 
 message("=== All diagnostics complete. ===")
