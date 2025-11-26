@@ -3,9 +3,20 @@ library(cmdstanr)
 library(posterior)
 library(loo)
 
+message("=== Starting model diagnostics pipeline ===")
+
+#-------------------------------------------------------------
+# Load all fits
+#-------------------------------------------------------------
+
 fitted_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fitted"
 
+message("Listing files in ", fitted_dir)
+
 files <- list.files(fitted_dir, full.names = TRUE, pattern = "\\.RDS$")
+message("Found ", length(files), " fitted model files.")
+
+message("Loading fits into memory...")
 
 fits_table <- tibble(
   file = files,
@@ -19,10 +30,20 @@ fits_table <- tibble(
       grepl("no_me\\.RDS$",   filename) ~ "no_me",
       TRUE ~ NA_character_
     ),
-    fit = map(file, readRDS)
+    fit = map(file, ~{
+      message("  • Loading ", .x)
+      readRDS(.x)
+    })
   )
 
-####################### Convergence diagnostics #######################
+message("All fits loaded successfully.\n")
+
+#-------------------------------------------------------------
+# Convergence diagnostics
+#-------------------------------------------------------------
+
+message("=== Running convergence diagnostics ===")
+
 extract_diags <- function(fit) {
   summ <- fit$summary()
   diag <- fit$diagnostic_summary()
@@ -40,6 +61,8 @@ diag_table <- fits_table %>%
   mutate(diag = map(fit, extract_diags)) %>%
   unnest(diag)
 
+message("Convergence diagnostics computed for all models.\n")
+
 diag_summary <- diag_table %>%
   group_by(model_type) %>%
   summarise(
@@ -48,25 +71,38 @@ diag_summary <- diag_table %>%
     bad_ess  = mean(ess_min < 200),
     bad_ebfmi = mean(ebfmi_min < 0.2)
   )
-####################### Posterior predictive check summaries #######################
+
+message("=== Convergence Summary ===")
+print(diag_summary)
+message("\n")
+
+# Warn if any serious issues:
+if (any(diag_table$rhat_max > 1.05)) {
+  message("WARNING: Some fits have Rhat > 1.05")
+}
+if (any(diag_table$n_diverg > 0)) {
+  message("WARNING: Divergences detected in some fits")
+}
+
+#-------------------------------------------------------------
+# Posterior predictive summaries
+#-------------------------------------------------------------
+
+message("=== Computing PPC summaries ===")
+
 ppc_summary <- function(fit, y_obs_varname = "y", yrep_varname = "y_rep") {
   
-  # Extract observed y
   dat <- fit$metadata()$data
   y_obs <- dat[[y_obs_varname]]
-  N <- length(y_obs)
   
-  # Extract y_rep
   yrep <- fit$draws(yrep_varname, format = "matrix")
   ndraws <- min(30, nrow(yrep))
   yrep <- yrep[sample(1:nrow(yrep), ndraws), ]
   
-  # 90% coverage
   lo <- apply(yrep, 2, quantile, 0.05)
   hi <- apply(yrep, 2, quantile, 0.95)
   coverage <- mean(y_obs > lo & y_obs < hi)
   
-  # RMSE
   rmse <- mean((apply(yrep, 2, mean) - y_obs)^2)
   
   tibble(
@@ -87,25 +123,62 @@ ppc_summary_by_model <- ppc_table %>%
     median_rmse = median(rmse)
   )
 
-####################### LOO and WAIC #######################
+message("=== PPC Summary ===")
+print(ppc_summary_by_model)
+message("\n")
+
+#-------------------------------------------------------------
+# LOO IC
+#-------------------------------------------------------------
+
+message("=== Computing LOO ===")
+
 compute_loo <- function(fit) {
   ll <- fit$draws("log_lik")
-  loo(ll)
+  loo::loo(ll)
 }
+
+# LOO can be slow — print progress
 loo_table <- fits_table %>%
-  mutate(loo = map(fit, compute_loo))
+  mutate(loo = map(fit, ~{
+    message("  • Computing LOO for ", .x$metadata()$model_name)
+    compute_loo(.x)
+  }))
 
 loo_compare_table <- loo_table %>%
   select(perturb, model_type, loo) %>%
   unnest_wider(loo)
 
-####################### Effect summaries #######################
+message("LOO computed for all models.\n")
+
+#-------------------------------------------------------------
+# Parameter summaries
+#-------------------------------------------------------------
+
+message("=== Extracting parameter summaries ===")
+
 extract_params <- function(fit) {
   draws <- fit$draws(c("mu_delta", "tau", "sigma", "sigma_pert"), format="df")
   summarise_all(draws, median)
 }
+
 params_table <- fits_table %>%
   mutate(params = map(fit, extract_params)) %>%
   unnest(params)
 
-fwrite(fits_table, "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fit_summary.csv")
+message("Parameter summaries extracted.\n")
+
+#-------------------------------------------------------------
+# Save main summary
+#-------------------------------------------------------------
+
+output_file <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fit_summary.csv"
+
+message("Saving model summary to: ", output_file)
+write_csv(bind_cols(fits_table %>% select(perturb, model_type),
+                    diag_table %>% select(-file, -filename, -fit),
+                    ppc_table %>% select(-fit),
+                    params_table %>% select(-fit)), 
+          output_file)
+
+message("=== All diagnostics complete. ===")
