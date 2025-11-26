@@ -3,17 +3,15 @@ library(cmdstanr)
 library(posterior)
 library(loo)
 library(argparse)
-library(parallel)
-
-message("=== Starting model diagnostics pipeline ===")
 
 parser <- ArgumentParser()
 parser$add_argument("--cores", type = "numeric", required = TRUE)
-
 args <- parser$parse_args()
 cores <- args$cores
 
 options(mc.cores = cores)
+
+message("=== Starting model diagnostics pipeline ===")
 
 #-------------------------------------------------------------
 # Load all fits
@@ -25,9 +23,8 @@ message("Listing files in ", fitted_dir)
 
 files <- list.files(fitted_dir, full.names = TRUE, pattern = "\\.RDS$")
 message("Found ", length(files), " fitted model files.")
-message("Loading fits into memory...")
 
-fits <- mclapply(files, readRDS, mc.cores = cores)
+message("Loading fits into memory...")
 
 fits_table <- tibble(
   file = files,
@@ -41,7 +38,10 @@ fits_table <- tibble(
       grepl("no_me\\.RDS$",   filename) ~ "no_me",
       TRUE ~ NA_character_
     ),
-    fit = fits
+    fit = map(file, ~{
+      message("  • Loading ", .x)
+      readRDS(.x)
+    })
   )
 
 message("All fits loaded successfully.\n")
@@ -65,10 +65,8 @@ extract_diags <- function(fit) {
   )
 }
 
-diag_list <- mclapply(fits_table$fit, extract_diags, mc.cores = cores)
-
 diag_table <- fits_table %>%
-  mutate(diag = diag_list) %>%
+  mutate(diag = map(fit, extract_diags)) %>%
   unnest(diag)
 
 message("Convergence diagnostics computed for all models.\n")
@@ -121,10 +119,8 @@ ppc_summary <- function(fit, y_obs_varname = "y", yrep_varname = "y_rep") {
   )
 }
 
-ppc_list <- mclapply(fits_table$fit, ppc_summary, mc.cores = cores)
-
 ppc_table <- fits_table %>%
-  mutate(ppc = ppc_list) %>%
+  mutate(ppc = map(fit, ppc_summary)) %>%
   unnest(ppc)
 
 ppc_summary_by_model <- ppc_table %>%
@@ -150,11 +146,12 @@ compute_loo <- function(fit) {
   loo::loo(ll)
 }
 
-loo_list <- mclapply(fits_table$fit, compute_loo, mc.cores = cores)
-
 # LOO can be slow — print progress
 loo_table <- fits_table %>%
-  mutate(loo = loo_list)
+  mutate(loo = map(fit, ~{
+    message("  • Computing LOO for ", .x$metadata()$model_name)
+    compute_loo(.x)
+  }))
 
 loo_compare_table <- loo_table %>%
   select(perturb, model_type, loo) %>%
@@ -169,43 +166,12 @@ message("LOO computed for all models.\n")
 message("=== Extracting parameter summaries ===")
 
 extract_params <- function(fit) {
-
-  # Parameters actually present in this model
-  available <- fit$metadata()$model_params
-
-  # Base parameters (always present)
-  base_params <- c("mu_delta", "tau")
-
-  # Detect which sigma-like parameter exists
-  sigma_param <- intersect(c("sigma", "sigma_pert"), available)
-
-  # Parameters to extract
-  to_extract <- c(base_params, sigma_param)
-
-  # Extract only available parameters
-  draws <- fit$draws(to_extract, format = "df")
-
-  # Summaries
-  out <- draws %>% summarise(across(everything(), median))
-
-  # Rename sigma_pert or sigma → sigma
-  if (length(sigma_param) == 1) {
-    out <- out %>% rename(sigma = all_of(sigma_param))
-  } else {
-    # if neither is present (should not happen), fill NA
-    out$sigma <- NA_real_
-  }
-
-  # Ensure final column order
-  out <- out[, c("mu_delta", "tau", "sigma")]
-
-  return(out)
+  draws <- fit$draws(c("mu_delta", "tau", "sigma", "sigma_pert"), format="df")
+  summarise_all(draws, median)
 }
 
-params_list <- mclapply(fits_table$fit, extract_params, mc.cores = cores)
-
 params_table <- fits_table %>%
-  mutate(params = params_list) %>%
+  mutate(params = map(fit, extract_params)) %>%
   unnest(params)
 
 message("Parameter summaries extracted.\n")
@@ -217,14 +183,10 @@ message("Parameter summaries extracted.\n")
 output_file <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fit_summary.csv"
 
 message("Saving model summary to: ", output_file)
-
-summary_table <- fits_table %>%
-  select(perturb, model_type) %>%
-  bind_cols(
-    diag_table %>% select(-fit, -file, -filename),
-    ppc_table %>% select(-fit),
-    params_table %>% select(-fit)
-  )
-write_csv(summary_table, output_file)
+write_csv(bind_cols(fits_table %>% select(perturb, model_type),
+                    diag_table %>% select(-file, -filename, -fit),
+                    ppc_table %>% select(-fit),
+                    params_table %>% select(-fit)), 
+          output_file)
 
 message("=== All diagnostics complete. ===")

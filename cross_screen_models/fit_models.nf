@@ -30,9 +30,6 @@ process FIT_NO_ME {
     val perturb
     path precompile_flag
 
-  output:
-    tuple val(perturb), path("status.txt")
-
   script:
   """
   fit_no_me.R --perturb ${perturb}
@@ -47,9 +44,6 @@ process FIT_ME_J {
   input:
     val perturb
     path precompile_flag
-
-  output:
-    tuple val(perturb), path("status.txt")
 
   script:
   """
@@ -66,9 +60,6 @@ process FIT_FULL_ME {
     val perturb
     path precompile_flag
 
-  output:
-    tuple val(perturb), path("status.txt")
-
   script:
   """
   fit_full_me.R --perturb ${perturb}
@@ -79,9 +70,9 @@ workflow {
   perturbList = Channel.fromPath(params.perturbList).splitText()
   pre = PRECOMPILE_MODELS()
 
-  results_no_me = FIT_NO_ME(perturbList, pre)
-  results_me_j = FIT_ME_J(perturbList, pre)
-  results_me_both = FIT_FULL_ME(perturbList, pre)
+  FIT_NO_ME(perturbList, pre)
+  FIT_ME_J(perturbList, pre)
+  FIT_FULL_ME(perturbList, pre)
 
 }
 
