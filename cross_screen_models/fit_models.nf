@@ -60,34 +60,27 @@ process RUN_SUMMARY {
   publishDir ".", mode: "copy"
 
   input:
-    tuple val(perturb), path(status) from results.collect()
+    tuple val(perturb), path(status)
 
   output:
     path "run_summary.txt"
 
+  when:
+    status.text.contains('FAIL')
+
   script:
   """
-  rm -f run_summary.txt
-  # Loop through the collected results
-  while IFS=$'\t' read perturb status; do
-    if grep -q FAIL "$status"; then
-        echo "$perturb" >> run_summary.txt
-    fi
-  done < <(paste perturb status)
+  echo "${perturb}" > run_summary.txt
   """
 }
 
-
-/*
- * WORKFLOW
- */
 workflow {
   perturbList = Channel.fromPath(params.perturbList).splitText()
-
   pre = PRECOMPILE_MODELS()
 
-  // link precompile flag to each perturb
-  results = FIT_CROSS_SCREEN_MODELS(perturbList.map{ it }, pre)
+  results = FIT_CROSS_SCREEN_MODELS(perturbList, pre)
 
   RUN_SUMMARY(results)
+    .collectFile(name: "run_summary.txt", mode: 'append')
 }
+
