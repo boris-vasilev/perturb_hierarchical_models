@@ -2,8 +2,17 @@ library(tidyverse)
 library(cmdstanr)
 library(posterior)
 library(loo)
+library(argparse)
 
 message("=== Starting model diagnostics pipeline ===")
+
+parser <- ArgumentParser()
+parser$add_argument("--cores", type = "numeric", required = TRUE)
+
+args <- parser$parse_args()
+cores <- args$cores
+
+options(mc.cores = cores)
 
 #-------------------------------------------------------------
 # Load all fits
