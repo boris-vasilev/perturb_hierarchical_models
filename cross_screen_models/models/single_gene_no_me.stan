@@ -9,7 +9,7 @@ parameters {
   real mu_delta;                 // global mean effect
   real<lower=1e-6> tau;             // between-gene SD of delta_j
   vector[J] z_delta;           // non-centered random effects
-  real<lower=1e-6> sigma;           // residual SD
+  real<lower=1e-6> sigma_pert;           // residual SD
 }
 
 transformed parameters {
@@ -24,12 +24,12 @@ model {
   // mu_delta small; most genes unaffected by perturb i
   tau      ~ exponential(1);     // SD of the distribution of downstream effects
   // small tau -> i doesn’t affect many genes; big tau -> i affects many genes
-  sigma    ~ exponential(1);     // variation for the same gene across screens
+  sigma_pert    ~ exponential(1);     // variation for the same gene across screens
 
   z_delta ~ normal(0, 1);      // normalised delta
 
   // Likelihood
-  y ~ normal(delta[j_idx], sigma);
+  y ~ normal(delta[j_idx], sigma_pert);
 }
 
 generated quantities {
@@ -37,6 +37,6 @@ generated quantities {
   vector[N] y_rep;
 
   for (n in 1:N) {
-    y_rep[n] = normal_rng(delta[j_idx[n]], sigma);
+    y_rep[n] = normal_rng(delta[j_idx[n]], sigma_pert);
   }
 }

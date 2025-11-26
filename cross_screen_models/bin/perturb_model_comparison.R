@@ -70,7 +70,7 @@ if(!file.exists("{fitted_dir}/{i}_no_me.RDS")) {
     iter_sampling = 1000,
     seed = 123
   )
-  saveRDS(fit.no_me, glue("{fitted_dir}/{i}_no_me.RDS"))
+  fit.no_me$save_object(file = glue("{fitted_dir}/{i}_no_me.RDS"))
 }
 
 ####################### MODEL 2: ME ON J #######################
@@ -96,7 +96,7 @@ if(!file.exists("{fitted_dir}/{i}_me_j.RDS")) {
     seed = 123
   )
 
-  saveRDS(fit.me_j, glue("{fitted_dir}/{i}_me_j.RDS"))
+  fit.me_j$save_object(file = glue("{fitted_dir}/{i}_me_j.RDS"))
 }
 
 ####################### MODEL 3: FULL ME #######################
@@ -124,5 +124,5 @@ if(!file.exists("{fitted_dir}/{i}_full_me.RDS")) {
     seed = 123
   )
 
-  saveRDS(fit.me_both, glue("{fitted_dir}/{i}_full_me.RDS"))
+  fit.me_both$save_object(file = glue("{fitted_dir}/{i}_full_me.RDS"))
 }

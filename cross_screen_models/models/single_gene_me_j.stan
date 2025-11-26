@@ -10,7 +10,7 @@ parameters {
   real mu_delta;                 // global mean delta
   real<lower=1e-6> tau;          // SD of delta_j
   vector[J] z_delta;           // raw random effects
-  real<lower=1e-6> sigma;        // extra noise beyond SE
+  real<lower=1e-6> sigma_pert;        // extra noise beyond SE
 }
 
 transformed parameters {
@@ -22,18 +22,18 @@ model {
   // Priors
   mu_delta ~ normal(0, 0.1);
   tau      ~ exponential(1);
-  sigma    ~ exponential(1);
+  sigma_pert    ~ exponential(1);
 
   z_delta ~ normal(0, 1);
 
   // Likelihood: measurement error + extra noise
   for (n in 1:N) {
-    y[n] ~ normal(delta[ j_idx[n] ], sqrt(se_y[n]^2 + sigma^2));
+    y[n] ~ normal(delta[ j_idx[n] ], sqrt(se_y[n]^2 + sigma_pert^2));
   }
 }
 
 generated quantities {
   vector[N] y_rep;
   for (n in 1:N)
-    y_rep[n] = normal_rng(delta[j_idx[n]], sqrt(se_y[n]^2 + sigma^2));
+    y_rep[n] = normal_rng(delta[j_idx[n]], sqrt(se_y[n]^2 + sigma_pert^2));
 }
