@@ -11,8 +11,8 @@ cores <- args$cores
 
 options(mc.cores = cores)
 
-fitted_dir <- "/rds/.../fitted"
-out_dir <- "/rds/.../per_fit_summaries"
+fitted_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fitted"
+out_dir <- "/rds/project/rds-csoP2nj6Y6Y/biv22/perturb_hierarchical_models/cross_screen_models/fitted_summary"
 dir.create(out_dir, showWarnings = FALSE)
 
 files <- list.files(fitted_dir, full.names = TRUE, pattern = "\\.RDS$")
