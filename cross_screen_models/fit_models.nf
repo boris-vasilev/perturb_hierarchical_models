@@ -56,23 +56,23 @@ process FIT_CROSS_SCREEN_MODELS {
 /*
  * PROCESS 3 — Summarise results (runs once)
  */
-process RUN_SUMMARY {
-  publishDir ".", mode: "copy"
+// process RUN_SUMMARY {
+//   publishDir ".", mode: "copy"
 
-  input:
-    tuple val(perturb), path(status)
+//   input:
+//     tuple val(perturb), path(status)
 
-  output:
-    path "run_summary.txt"
+//   output:
+//     path "run_summary.txt"
 
-  when:
-    status.text.contains('FAIL')
+//   when:
+//     status.text.contains('FAIL')
 
-  script:
-  """
-  echo "${perturb}" > run_summary.txt
-  """
-}
+//   script:
+//   """
+//   echo "${perturb}" > run_summary.txt
+//   """
+// }
 
 workflow {
   perturbList = Channel.fromPath(params.perturbList).splitText()
@@ -80,7 +80,7 @@ workflow {
 
   results = FIT_CROSS_SCREEN_MODELS(perturbList, pre)
 
-  RUN_SUMMARY(results)
-    .collectFile(name: "run_summary.txt", mode: 'append')
+  // RUN_SUMMARY(results)
+  //   .collectFile(name: "run_summary.txt", mode: 'append')
 }
 
