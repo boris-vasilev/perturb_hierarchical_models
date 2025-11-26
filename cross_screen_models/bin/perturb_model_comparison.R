@@ -61,8 +61,9 @@ stan_data.no_me <- list(
 
 if(!file.exists("{fitted_dir}/{i}_no_me.RDS")) {
   print(glue("NO ME model for {i}"))
-  mod.no_me <- cmdstan_model(file.path(models_dir, "single_gene_no_me.stan"),
-    compile = FALSE)
+  mod.no_me <- cmdstan_model(stan_file=file.path(models_dir, "single_gene_no_me.stan"),
+                             exe_file=file.path(models_dir, "single_gene_no_me"),
+                             compile = FALSE)
   fit.no_me <- mod.no_me$sample(
     data = stan_data.no_me,
     chains = 4,
@@ -87,8 +88,9 @@ stan_data.me_j <- list(
 
 if(!file.exists("{fitted_dir}/{i}_me_j.RDS")) {
   print(glue("ME ON J model for {i}"))
-  mod.me_j <- cmdstan_model(file.path(models_dir, "single_gene_me_j.stan"),
-    compile = FALSE)
+  mod.me_j <- cmdstan_model(stan_file=file.path(models_dir, "single_gene_me_j.stan"),
+                            exe_file=file.path(models_dir, "single_gene_me_j"),
+                            compile = FALSE)
   fit.me_j <- mod.me_j$sample(
     data = stan_data.me_j,
     chains = 4,
@@ -116,8 +118,9 @@ stan_data.me_both <- list(
 )
 if(!file.exists("{fitted_dir}/{i}_full_me.RDS")) {
   print(glue("FULL ME model for {i}"))
-  mod.me_both <- cmdstan_model(file.path(models_dir, "single_gene_full_me.stan"),
-    compile = FALSE)
+  mod.me_both <- cmdstan_model(stan_file=file.path(models_dir, "single_gene_full_me.stan"),
+                               exe_file=file.path(models_dir, "single_gene_full_me"),
+                               compile = FALSE)
   fit.me_both <- mod.me_both$sample(
     data = stan_data.me_both,
     chains = 4,
