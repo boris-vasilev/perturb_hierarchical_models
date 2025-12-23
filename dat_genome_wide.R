@@ -19,7 +19,7 @@ DE_dir <- file.path(data_dir, "perturb")
 QC_dir <- file.path(data_dir, "perturb_QC")
 pairs_dir <- file.path(data_dir, "pairs")
 
-output_file <- file.path(pairs_dir, "full_dat_GW.csv")
+output_file <- file.path(pairs_dir, "full_dat_GW_lead.csv")
 
 cell_DE_dirs <- setNames(file.path(DE_dir, cells), cells)
 
@@ -136,10 +136,10 @@ cis_eSNPs <- cis_eQTL %>%
   as.data.table %>%
   filter(GeneSymbol %in% perturb_summary_stats$perturb) %>%
   calculate_eQTL_beta %>%
-  # group_by(GeneSymbol) %>%
-  # filter(Pvalue == min(Pvalue)) %>%
-  # filter(abs(Beta) == max(abs(Beta))) %>%
-  # ungroup() %>%
+  group_by(GeneSymbol) %>%
+  filter(Pvalue == min(Pvalue)) %>%
+  filter(abs(Beta) == max(abs(Beta))) %>%
+  ungroup() %>%
   filter(FDR < 0.05)
 
 message("  ✔ Significant perturbation cis-eSNPs found: ", nrow(cis_eSNPs))
@@ -170,11 +170,11 @@ message("  ✔ eQTL pairs: ", nrow(merged.QTL))
 
 message("[6/7] Selecting lead cis-eSNP of perturbed gene")
 
-merged.QTL <- merged.QTL %>%
-  group_by(perturb) %>%
-  filter(Pvalue.perturb == min(Pvalue.perturb)) %>%
-  filter(abs(Beta.perturb) == max(abs(Beta.perturb))) %>%
-  ungroup()
+# merged.QTL <- merged.QTL %>%
+#   group_by(perturb) %>%
+#   filter(Pvalue.perturb == min(Pvalue.perturb)) %>%
+#   filter(abs(Beta.perturb) == max(abs(Beta.perturb))) %>%
+#   ungroup()
 
 message("[7/7] Merging perturbation and eQTL pairs")
 dat <- merge(perturb_summary_stats, merged.QTL, by = c("perturb", "effect"))
