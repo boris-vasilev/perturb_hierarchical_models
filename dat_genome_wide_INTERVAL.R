@@ -149,7 +149,7 @@ cis_eSNPs <- cis_eQTL %>%
 message("  ✔ Significant perturbation cis-eSNPs found: ", nrow(cis_eSNPs))
 
 message("[3/7] Reading trans-eQTLs")
-trans_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/trans_eQTLs_eQTLgen.txt",
+trans_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/trans_eQTLs_INTERVAL.tsv",
                     sep = "\t",
                     # select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"),
                     select = c("variant_id","phenotype_id", "gene_name", "pval", "b", "b_se")) %>%
