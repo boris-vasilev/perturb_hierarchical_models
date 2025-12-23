@@ -131,13 +131,13 @@ cis_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/cis_eQTLs_INTERV
                   # select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele")
                   select = c("variant_rsid","phenotype_id", "gene_name", "pval_nominal", "qval", "slope", "slope_se")
                   ) %>%
-                  rename(SNP = "variant_rsid",
-                         ENSG = "phenotype_id",
-                         GeneSymbol = "gene_name",
-                         Pvalue = "pval_nominal",
-                         FDR = "qval",
-                         Beta = "slope",
-                         SE = "slope_se")
+                  dplyr::rename(SNP = variant_rsid,
+                                ENSG = phenotype_id,
+                                GeneSymbol = gene_name,
+                                Pvalue = pval_nominal,
+                                FDR = qval,
+                                Beta = slope,
+                                SE = slope_se)
 message("  ✔ cis-eQTLs loaded: ", nrow(cis_eQTL))
 
 message("[2/7] Selecting significant cis-eSNPs and calculating beta")
@@ -153,13 +153,11 @@ trans_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/trans_eQTLs_IN
                     sep = "\t",
                     # select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"),
                     select = c("variant_id","phenotype_id", "gene_name", "pval", "b", "b_se")) %>%
-                    rename(
-                      SNP = "variant_id",
-                      ENSG = "phenotype_id",
-                      Pvalue = "pval",
-                      Beta = "b",
-                      SE = "b_se"
-                    )
+                    dplyr::rename(SNP = variant_id,
+                                  ENSG = phenotype_id,
+                                  Pvalue = pval,
+                                  Beta = b,
+                                  SE = b_se)
 message("  ✔ trans-eQTLs loaded: ", nrow(trans_eQTL))
 
 trans.symbols <- mapIds(org.Hs.eg.db, keys = unique(trans_eQTL$ENSG),
@@ -180,9 +178,9 @@ merged.QTL <- merge(
   trans_eQTL,
   allow.cartesian = TRUE,
   by = "SNP", suffixes = c(".perturb", ".effect")
-) %>% rename(
-  perturb = "GeneSymbol.perturb",
-  effect = "GeneSymbol.effect",
+) %>% dplyr::rename(
+  perturb = GeneSymbol.perturb,
+  effect = GeneSymbol.effect,
 )
 
 message("  ✔ eQTL pairs: ", nrow(merged.QTL))
