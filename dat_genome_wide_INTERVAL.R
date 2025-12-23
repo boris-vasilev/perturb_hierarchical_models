@@ -36,7 +36,7 @@ base_expressions <- mclapply(base_expression_files, fread, mc.cores = length(cel
 QC_pairs_pass <- mclapply(gene_QC, function(QC) {
   QC %>%
     filter(n_expr_trt > 3,  n_expr_ctrl > 3) %>%
-    select(perturbation, gene, effect)
+    dplyr::select(perturbation, gene, effect)
 }, mc.cores = length(cells))
 
 
