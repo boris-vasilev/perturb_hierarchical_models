@@ -30,7 +30,7 @@ obs_df = pl.from_pandas(
             "target_baseMean",
         ]
     ].reset_index(names="obs_id")
-)
+).with_columns(pl.col("target_contrast_gene_name").cast(pl.String))
 
 var_df = pl.from_pandas(
     on_target_adata.var[
@@ -39,7 +39,7 @@ var_df = pl.from_pandas(
             "gene_name",
         ]
     ].reset_index(names="var_id")
-).with_columns(pl.col("gene_name").cast(pl.String))
+)
 
 
 def layer_to_df(adata, layer_name, value_name):
