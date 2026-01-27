@@ -59,7 +59,7 @@ perturbation_effect_df <- perturbation_effect_df %>% filter(perturbation != effe
 write_csv(perturbation_effect_df, here("data/perturb/pertubration_pairs.csv"))
 
 ####### PROCESS EQTLS
-cis_eQTL <- fread(here("data/summary_stats/cis_eQTLs_eQTLgen.txt.gz"), sep = "\t")
+cis_eQTL <- fread(here("data/summary_stats/cis_eQTLs_eQTLgen.tsv.gz"), sep = "\t")
 
 # get the cis-eQTLs of perturbation genes
 cis_eQTL.perturbations.all <- cis_eQTL %>% filter(GeneSymbol %in% perturbation_effect_df$perturbation)

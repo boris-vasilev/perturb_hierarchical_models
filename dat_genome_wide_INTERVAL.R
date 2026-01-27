@@ -152,7 +152,7 @@ message("[3/7] Reading trans-eQTLs")
 trans_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/trans_eQTLs_INTERVAL.tsv",
                     sep = "\t",
                     # select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"),
-                    select = c("variant_id","phenotype_id", "gene_name", "pval", "b", "b_se")) %>%
+                    select = c("variant_id","phenotype_id", "pval", "b", "b_se")) %>%
                     dplyr::rename(SNP = variant_id,
                                   ENSG = phenotype_id,
                                   Pvalue = pval,

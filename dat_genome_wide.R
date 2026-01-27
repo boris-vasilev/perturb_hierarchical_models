@@ -125,7 +125,7 @@ perturb_summary_stats <- rbindlist(results_per_cell)
 ####### PROCESS EQTLS
 ### -- Load and filter cis-eQTLs -- ###
 message("[1/7] Reading cis-eQTLs")
-cis_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/cis_eQTLs_eQTLgen.txt",
+cis_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/cis_eQTLs_eQTLgen.tsv",
                   sep = "\t",
                   select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"))
 message("  ✔ cis-eQTLs loaded: ", nrow(cis_eQTL))

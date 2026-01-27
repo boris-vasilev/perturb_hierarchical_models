@@ -1,10 +1,20 @@
+import os
+
+# Increase Java Heap Size for PySpark
+os.environ["PYSPARK_SUBMIT_ARGS"] = (
+    "--driver-memory 6g "
+    "--executor-memory 32g "
+    "--conf spark.executor.memoryOverhead=10g "
+    "pyspark-shell"
+)
+
+
 import scanpy as sc
 import polars as pl
 import pandas as pd
-import sys
 import numpy as np
 from pathlib import Path
-
+from functions_LD import compute_r2_for_pairs
 
 # Parse arguments
 # h5ad_path = sys.argv[1]  # Path to h5ad file
@@ -16,6 +26,8 @@ adata = sc.read_h5ad(h5ad_path)
 
 # Select only entries for gRNAs with successful on-target KD
 on_target_adata = adata[adata.obs.ontarget_effect_category == "on-target KD"]
+
+del adata
 
 perturbed_genes = on_target_adata.obs.target_contrast_gene_name.unique()
 expressed_genes = on_target_adata.var.gene_name.unique()
@@ -100,11 +112,18 @@ DE_full = DE_df.with_columns(
 # Read cis-eQTLs
 cis_eQTL = (
     pl.scan_csv(
-        "/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/cis_eQTLs_eQTLgen.txt",
+        "/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/cis_eQTLs_eQTLgen.tsv",
         separator="\t",
     )
     .select(
         [
+            pl.format(
+                "{}:{}:{}:{}",
+                pl.col("SNPChr"),
+                pl.col("SNPPos"),
+                pl.col("OtherAllele"),
+                pl.col("AssessedAllele"),
+            ).alias("id"),
             "SNP",
             "Pvalue",
             "FDR",
@@ -113,7 +132,7 @@ cis_eQTL = (
             "NrSamples",
             "AssessedAllele",
             "OtherAllele",
-        ]
+        ],
     )
     .filter(
         pl.col("GeneSymbol").is_in(
@@ -131,6 +150,13 @@ trans_eQTL = (
     )
     .select(
         [
+            pl.format(
+                "{}:{}:{}:{}",
+                pl.col("SNPChr"),
+                pl.col("SNPPos"),
+                pl.col("OtherAllele"),
+                pl.col("AssessedAllele"),
+            ).alias("id"),
             "SNP",
             "Pvalue",
             "FDR",
@@ -198,6 +224,7 @@ def calculate_eQTL_beta(
         .with_columns(Beta=pl.col("Zscore") * pl.col("SE"))
         .select(
             [
+                "id",
                 "SNP",
                 "GeneSymbol",
                 "Pvalue",
@@ -212,11 +239,28 @@ def calculate_eQTL_beta(
 
 
 cis_eQTL = calculate_eQTL_beta(cis_eQTL, snp_frq_df).select(
+    pl.col("id"),
     pl.col("SNP"),
     pl.exclude("SNP").name.suffix(
         "_cis"
     ),  # append a _cis suffix to all columns except SNP
 )
+
+# Identify lead SNPs (smallest p-value)
+lead_snps = (
+    cis_eQTL.sort(
+        ["GeneSymbol_cis", "Pvalue_cis", pl.col("Beta_cis").abs()],
+        descending=[False, False, True],
+    )
+    .group_by("GeneSymbol_cis")
+    .first()
+    .select(
+        pl.col("GeneSymbol_cis").alias("cis_gene"),
+        pl.col("SNP").alias("rsid_lead"),
+        pl.col("id").alias("id_lead"),
+    )
+)
+
 trans_eQTL = calculate_eQTL_beta(trans_eQTL, snp_frq_df).select(
     pl.col("SNP"),
     pl.exclude("SNP").name.suffix(
@@ -224,6 +268,7 @@ trans_eQTL = calculate_eQTL_beta(trans_eQTL, snp_frq_df).select(
     ),  # append a _trans suffix to all columns except SNP
 )
 
+del dfs, snp_frq_df
 
 merged_QTL = (
     cis_eQTL.join(
@@ -234,6 +279,8 @@ merged_QTL = (
     .with_columns(y=(pl.col("FDR_trans") < 0.05).cast(pl.Int8))
     .rename({"GeneSymbol_cis": "cis_gene", "GeneSymbol_trans": "trans_gene"})
 )
+
+del cis_eQTL, trans_eQTL
 
 lead_cis = (
     merged_QTL.select(["cis_gene", "SNP", "Pvalue_cis", "Beta_cis"])
@@ -246,16 +293,49 @@ lead_cis = (
     .select(["cis_gene", "SNP"])
 )
 
-merged_QTL_lead = merged_QTL.join(
+merged_QTL = merged_QTL.join(
     lead_cis,
     on=["cis_gene", "SNP"],
     how="inner",
 )
 
-dat = merged_QTL_lead.join(
+dat = merged_QTL.join(
     DE_full,
     on=["cis_gene", "trans_gene"],
     how="inner",
 )
 
-dat.write_csv("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat_T_cell.csv")
+del DE_full, merged_QTL
+
+dat = dat.with_columns(x=(pl.col("padj") < 0.05).cast(pl.Int8))
+
+# Join true lead SNP information to estimate r2 with true lead SNPs
+dat = dat.join(
+    lead_snps,
+    on="cis_gene",
+    how="inner",
+)
+
+# 1) extract unique LD pairs
+# Calculate r2 between SNP and lead SNP only for x1y1 pairs
+# To reduce computation time and investigate only
+df_ld_pairs = (
+    dat.filter(pl.col("x") == 1, pl.col("y") == 1).select(["id", "id_lead"]).unique()
+)
+
+# 2) compute r2
+r2_df = compute_r2_for_pairs(df_ld_pairs)
+
+# 3) join back to the full dataset
+dat = dat.join(
+    r2_df,
+    on=["id", "id_lead"],
+    how="left",
+)
+
+dat_split = dat.partition_by("culture_condition", as_dict=True)
+
+for condition, condition_dat in dat_split.items():
+    condition_dat.write_csv(
+        f"/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat_T_cell_{condition[0]}_with_r2.csv"
+    )
