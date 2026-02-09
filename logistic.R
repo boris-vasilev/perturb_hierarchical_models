@@ -26,7 +26,7 @@ model <- args$model
 
 # eff <- if(args$efficient) "_eff" else ""
 
-dat_file <- if(args$cells %in% essential_screens) {
+dat_file <- if(cells %in% essential_screens) {
   "/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat.csv"
 } else {
   "/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat_GW.csv"
@@ -56,7 +56,7 @@ dat <- fread(dat_file) %>%
   select(perturb, effect, x, y) %>%
   group_by(perturb) %>%
   filter(any(x == 1)) %>%
-  filter(any(y == 1)) %>%
+  # filter(any(y == 1)) %>%
   ungroup
 
 prior <- if(model == "vivs_horseshoe") {
@@ -85,4 +85,4 @@ fit <- brm(
 )
 
 # saveRDS(fit, glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/logit_{model}{eff}.rds"))
-saveRDS(fit, glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/logit_{model}.rds"))
+saveRDS(fit, glue("/rds/project/rds-csoP2nj6Y6Y/biv22/models/{cells}/logit_{model}_nofilter_y.rds"))
