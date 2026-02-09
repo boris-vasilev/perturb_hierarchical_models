@@ -5,7 +5,7 @@ library(glue)
 library(data.table)
 
 
-supported_models <- c("varying_intercept_varying_slope",
+supported_models <- c("vivs",
                       "no_pooling_intercept_varying_slope",
                       "varying_intercept_fixed_slope",
                       "vivs_student",
@@ -35,7 +35,7 @@ dat_file <- if(args$cells %in% essential_screens) {
 print(glue("Cells: {cells}            Model: {model} "))
 
 # Use if-else for selecting the formula based on the model
-if (model %in% c("varying_intercept_varying_slope", "vivs_horseshoe")) {
+if (model %in% c("vivs", "vivs_horseshoe")) {
   formula <- bf(y ~ x + (1 + x | perturb))
 } else if (model == "no_pooling_intercept_varying_slope") {
   formula <- bf(y ~ 0 + factor(perturb) + x + (0 + x | perturb))
