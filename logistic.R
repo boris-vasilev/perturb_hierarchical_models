@@ -59,18 +59,6 @@ dat <- fread(dat_file) %>%
   filter(any(y == 1)) %>%
   ungroup
 
-# Fit logistic regression
-fit <- brm(
-  formula = formula,
-  data = dat,
-  family = bernoulli(link = "logit"),
-  threads = threading(4),
-  chains = 6,
-  cores = 6,
-  iter = 2000,
-  backend = "cmdstanr"
-)
-
 prior <- if(model == "vivs_horseshoe") {
   c(
     prior(horseshoe(df = 1, par_ratio = 0.1), class = "b"),
@@ -87,8 +75,8 @@ fit <- brm(
   chains = 6,
   cores = 6,
   threads = threading(4),  # 6 × 4 = 24 total threads
-  iter = 4000,
-  warmup = 2000,
+  iter = 2000,
+  warmup = 1000,
   control = list(
     adapt_delta = 0.98,
     max_treedepth = 15
