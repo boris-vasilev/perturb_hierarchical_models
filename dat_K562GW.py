@@ -9,10 +9,8 @@ os.environ["PYSPARK_SUBMIT_ARGS"] = (
 )
 
 
-import scanpy as sc
 import polars as pl
 import pandas as pd
-import numpy as np
 from pathlib import Path
 from functions_LD import compute_r2_for_pairs
 
