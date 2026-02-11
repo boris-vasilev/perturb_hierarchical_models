@@ -258,21 +258,34 @@ df_ld_pairs = (
 # 2) compute r2
 r2_df = compute_r2_for_pairs(df_ld_pairs, lead_col="id_cojo")
 
+
+r2_df.write_csv("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/gw_cojo_r2.csv")
+
+
 # 3) get largest r2 for each gene across all COJO SNPs
+r2_max = (
+    dat.select(["cis_gene", "id"])
+    .unique()
+    .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
+    .join(r2_df, on=["id", "id_cojo"], how="left")
+    .group_by(["cis_gene", "id"])
+    .agg(pl.max("r2").alias("r2_max_cojo"))
+)
+# get which COJO SNP achieved that max r2
 r2_best = (
     dat.select(["cis_gene", "id"])
     .unique()
     .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
-    .select(["cis_gene", "id", "id_cojo"])
     .join(r2_df, on=["id", "id_cojo"], how="left")
+    .join(r2_max, on=["cis_gene", "id"], how="inner")
+    .filter(pl.col("r2") == pl.col("r2_max_cojo"))
     .group_by(["cis_gene", "id"])
-    .agg(
-        pl.max("r2").alias("r2_max_cojo"),
-        pl.first("id_cojo").sort_by("r2", descending=True).alias("id_cojo_best"),
-    )
+    .first()  # if ties, just take the first one
+    .select(["cis_gene", "id", "id_cojo", "r2_max_cojo"])
+    .rename({"id_cojo": "id_cojo_best"})
 )
 
-# 3) join back to the full dataset
+# 4) join back to the full dataset
 dat = dat.join(r2_best, on=["cis_gene", "id"], how="left")
 
 dat.write_csv(
