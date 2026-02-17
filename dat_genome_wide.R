@@ -19,7 +19,7 @@ DE_dir <- file.path(data_dir, "perturb")
 QC_dir <- file.path(data_dir, "perturb_QC")
 pairs_dir <- file.path(data_dir, "pairs")
 
-output_file <- file.path(pairs_dir, "full_dat_GW_lead.csv")
+output_file <- file.path(pairs_dir, "full_dat_GW.csv")
 
 cell_DE_dirs <- setNames(file.path(DE_dir, cells), cells)
 
@@ -147,7 +147,7 @@ message("  ✔ Significant perturbation cis-eSNPs found: ", nrow(cis_eSNPs))
 message("[3/7] Reading trans-eQTLs")
 trans_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/trans_eQTLs_eQTLgen.txt",
                     sep = "\t",
-                    select = c("SNP", "Pvalue", "FDR", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"))
+                    select = c("SNP", "Pvalue", "FDR", "Gene", "GeneSymbol", "Zscore", "NrSamples", "AssessedAllele", "OtherAllele"))
 message("  ✔ trans-eQTLs loaded: ", nrow(trans_eQTL))
 
 message("[4/7] Selecting expressed genes trans-eQTLs and calculating beta")
@@ -164,6 +164,9 @@ merged.QTL <- merge(
 ) %>% rename(
   perturb = "GeneSymbol.perturb",
   effect = "GeneSymbol.effect",
+  # keep ENSG of trans_gene for merging with perturbation stats later. Duplicates occur on gene symbol
+  # Example : awk -F'\t' '$2=="rs10953541" && $9=="RNF31"' trans_eQTLs_eQTLgen.txt
+  gene = "Gene",
 ) %>% mutate(y = ifelse(FDR.effect < 0.05, 1, 0))
 
 message("  ✔ eQTL pairs: ", nrow(merged.QTL))
@@ -177,7 +180,7 @@ message("[6/7] Selecting lead cis-eSNP of perturbed gene")
 #   ungroup()
 
 message("[7/7] Merging perturbation and eQTL pairs")
-dat <- merge(perturb_summary_stats, merged.QTL, by = c("perturb", "effect"))
+dat <- merge(perturb_summary_stats, merged.QTL, by = c("perturb", "effect", "gene"))
 message("  ✔ Final perturbation/eQTL data rows: ", nrow(dat))
 
 message("✔ Writing final outputs...")

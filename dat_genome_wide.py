@@ -118,7 +118,8 @@ cis_eQTL = (
     )
     .filter(
         ~(
-            pl.col("SNPChr") == 6 & pl.col("SNPPos").is_between(28_477_797, 33_448_354)
+            (pl.col("SNPChr") == 6)
+            & (pl.col("SNPPos").is_between(28_477_797, 33_448_354))
         )  # Exclude MHC region
     )
     .select(

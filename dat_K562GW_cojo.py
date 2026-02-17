@@ -18,6 +18,7 @@ DE_full = pl.read_csv(
     "/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat_GW.csv",
     infer_schema_length=100000,
 ).select(
+    pl.col("SNP"),
     pl.col("perturb").alias("cis_gene"),
     pl.col("effect").alias("trans_gene"),
     pl.col("perturb_eff"),
@@ -209,7 +210,7 @@ del cis_eQTL, trans_eQTL
 
 dat = merged_QTL.join(
     DE_full,
-    on=["cis_gene", "trans_gene"],
+    on=["SNP", "cis_gene", "trans_gene"],
     how="inner",
 )
 
@@ -269,7 +270,7 @@ r2_max = (
     .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
     .join(r2_df, on=["id", "id_cojo"], how="left")
     .group_by(["cis_gene", "id"])
-    .agg(pl.max("r2").alias("r2_max_cojo"))
+    .agg(pl.max("r2").alias("r2_max_cojo"), pl.count("id_cojo").alias("n_cojo_signals"))
 )
 # get which COJO SNP achieved that max r2
 r2_best = (
