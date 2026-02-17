@@ -12,4 +12,4 @@ module load openjdk/17.0.11_9/gcc/szfinnph
 source ~/.bashrc
 conda activate env_nf
 
-python dat_genome_wide.py
+python -u dat_genome_wide.py
