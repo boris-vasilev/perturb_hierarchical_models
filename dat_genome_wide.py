@@ -302,7 +302,7 @@ print(
 # To get the lead cis-eSNP, we would need to go back to the full cis-eQTL summary stats, find the lead SNP per gene, and check if it was tested for trans effects
 # NOTE: For eQTLgen -- the lead SNP is often not trans-tested. For INTERVAL -- the lead SNPs are the ones tested
 selected_snps = (
-    merged_QTL.with_columns(abs_beta_cis=pl.col("Beta_cis").abs())
+    merged_QTL.with_columns(abs_beta_cis=pl.col("Zscore_cis").abs())
     .sort(["cis_gene", "Pvalue_cis", "abs_beta_cis"], descending=[False, False, True])
     .unique(subset=["cis_gene", "SNP"], keep="first")
     .unique(subset=["cis_gene"], keep="first")
