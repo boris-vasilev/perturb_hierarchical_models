@@ -1,4 +1,5 @@
 import os
+import argparse
 import polars as pl
 
 # Increase Java Heap Size for PySpark
@@ -12,7 +13,12 @@ os.environ["PYSPARK_SUBMIT_ARGS"] = (
 from pathlib import Path
 from functions_dat import compute_r2_for_pairs, harmonise_eqtl
 
-screen = "K562_GenomeWide"
+parser = argparse.ArgumentParser()
+parser.add_argument("--screen", type=str, required=True, help="Perturb-seq screen")
+parser.add_argument("--output", type=str, required=True, help="Output file name")
+args = parser.parse_args()
+screen = args.screen
+
 eqtl_study = "eQTLgen"
 
 DE_output_dir = "/rds/project/rds-csoP2nj6Y6Y/biv22/data/perturb"
@@ -22,7 +28,7 @@ eqtl_dir = "/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl"
 QC_file = f"{QC_dir}/{screen}/gene_QC.csv"
 base_expression_file = f"{QC_dir}/{screen}/base_expression.csv"
 # Output file
-output_file = "/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat_GW.csv"
+output_file = f"/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/{args.output}"
 
 
 ### Read Perturb-seq data
