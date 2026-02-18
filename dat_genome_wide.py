@@ -16,7 +16,9 @@ from functions_dat import compute_r2_for_pairs, harmonise_eqtl
 parser = argparse.ArgumentParser()
 parser.add_argument("--screen", type=str, required=True, help="Perturb-seq screen")
 parser.add_argument("--output", type=str, required=True, help="Output file name")
-parser.add_argument("--ld", type=bool, default=True, help="Calculate LD r2?")
+parser.add_argument("--ld", action="store_true")
+parser.add_argument("--no-ld", dest="ld", action="store_false")
+parser.set_defaults(ld=True)
 args = parser.parse_args()
 screen = args.screen
 
