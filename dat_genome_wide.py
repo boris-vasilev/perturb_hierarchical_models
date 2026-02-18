@@ -44,7 +44,15 @@ print("[1/9] Read DE stats")
 
 DE_stats = (
     pl.scan_csv(
-        f"{DE_output_dir}/{screen}/*.tsv", separator="\t", include_file_paths="filepath"
+        f"{DE_output_dir}/{screen}/*.tsv",
+        separator="\t",
+        include_file_paths="filepath",
+        schema_overrides={
+            "gene": pl.Utf8,
+            "log2FoldChange": pl.Float64,
+            "lfcSE": pl.Float64,
+            "padj": pl.Float64,
+        },
     )
     .select(
         [
