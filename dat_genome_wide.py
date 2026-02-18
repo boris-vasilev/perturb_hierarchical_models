@@ -16,6 +16,7 @@ from functions_dat import compute_r2_for_pairs, harmonise_eqtl
 parser = argparse.ArgumentParser()
 parser.add_argument("--screen", type=str, required=True, help="Perturb-seq screen")
 parser.add_argument("--output", type=str, required=True, help="Output file name")
+parser.add_argument("--ld", type=bool, default=True, help="Calculate LD r2?")
 args = parser.parse_args()
 screen = args.screen
 
@@ -53,6 +54,7 @@ DE_stats = (
             "lfcSE": pl.Float64,
             "padj": pl.Float64,
         },
+        null_values=["NA"],
     )
     .select(
         [
@@ -317,113 +319,115 @@ dat = merged_QTL.join(
 
 del DE_stats, merged_QTL
 
-# Calculate r2 between cis-gene lead SNP (from)
-print(
-    "[8/9] Calculate r2 between selected top cis-eSNP and lead cis-eSNP from eQTLgen (WARNING: for x1y1 pairs only)"
-)
-
-# Join true lead SNP information to estimate r2 with true lead SNPs
-dat = dat.join(
-    lead_snps,
-    on="cis_gene",
-    how="inner",
-)
-
-# 1) extract unique LD pairs
-# Calculate r2 between SNP and lead SNP only for x1y1 pairs
-# To reduce computation time and investigate only
-df_ld_pairs = (
-    dat.filter(pl.col("x") == 1, pl.col("y") == 1).select(["id", "id_lead"]).unique()
-)
-
-# 2) compute r2
-r2_df_lead = compute_r2_for_pairs(df_ld_pairs).rename({"r2": "r2_lead"})
-
-# 3) join back to the full dataset
-dat = dat.join(
-    r2_df_lead,
-    on=["id", "id_lead"],
-    how="left",
-)
-
-
-# Calculate r2 for each cis-gene selected SNP (top trans tested from eQTLgen)
-# with the cis-gene independent cis signals from INTERVAL (GCTA-COJO)
-print(
-    "[9/9] Calculate r2 between selected top cis-eSNP and independent cis signals from INTERVAL (GCTA-COJO) (WARNING: for x1y1 pairs only)"
-)
-# Extract GCTA-COJO independent causal variants for each perturbed gene
-cojo = (
-    pl.read_csv(
-        "/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/INTERVAL_eQTL_summary_statistics/cojo_independent_cis_signals.csv"
+if args.ld:
+    # Calculate r2 between cis-gene lead SNP (from)
+    print(
+        "[8/9] Calculate r2 between selected top cis-eSNP and lead cis-eSNP from eQTLgen (WARNING: for x1y1 pairs only)"
     )
-    .select(
-        pl.col("gene_name").alias("cis_gene"),
-        pl.col("variant_id").alias("rsid_cojo"),
-        pl.col("chr").cast(pl.Utf8).alias("chr"),
-        pl.col("pos_b37").cast(pl.Int64).alias("pos_b37"),
-        pl.col("effect_allele").alias("effect_allele"),
-        pl.col("other_allele").alias("other_allele"),
+
+    # Join true lead SNP information to estimate r2 with true lead SNPs
+    dat = dat.join(
+        lead_snps,
+        on="cis_gene",
+        how="inner",
     )
-    # build the hail-friendly variant string
-    .with_columns(
-        pl.format(
-            "{}:{}:{}:{}",
-            pl.col("chr"),
-            pl.col("pos_b37"),
-            pl.col("other_allele"),
-            pl.col("effect_allele"),
-        ).alias("id_cojo")
+
+    # 1) extract unique LD pairs
+    # Calculate r2 between SNP and lead SNP only for x1y1 pairs
+    # To reduce computation time and investigate only
+    df_ld_pairs = (
+        dat.filter(pl.col("x") == 1, pl.col("y") == 1)
+        .select(["id", "id_lead"])
+        .unique()
     )
-    .unique(subset=["cis_gene", "id_cojo"])
-)
 
-# 1) extract unique LD pairs
-# Calculate r2 between SNP and COJO SNPs only for x1y1 pairs
-# To reduce computation time and investigate only
-df_ld_pairs = (
-    dat.filter((pl.col("x") == 1) & (pl.col("y") == 1))
-    .select(["cis_gene", "id"])
-    .unique()
-    .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
-    .select(["id", "id_cojo"])
-    .unique()
-)
+    # 2) compute r2
+    r2_df_lead = compute_r2_for_pairs(df_ld_pairs).rename({"r2": "r2_lead"})
 
-# 2) compute r2
-r2_df_cojo = compute_r2_for_pairs(df_ld_pairs, lead_col="id_cojo").rename(
-    {"r2": "r2_cojo"}
-)
-
-# 3) get largest r2 for each gene across all COJO SNPs
-r2_max = (
-    dat.select(["cis_gene", "id"])
-    .unique()
-    .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
-    .join(r2_df_cojo, on=["id", "id_cojo"], how="left")
-    .group_by(["cis_gene", "id"])
-    .agg(
-        pl.max("r2_cojo").alias("r2_max_cojo"),
-        pl.count("id_cojo").alias("n_cojo_signals"),
+    # 3) join back to the full dataset
+    dat = dat.join(
+        r2_df_lead,
+        on=["id", "id_lead"],
+        how="left",
     )
-)
-# get which COJO SNP achieved that max r2
-r2_best = (
-    dat.select(["cis_gene", "id"])
-    .unique()
-    .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
-    .join(r2_df_cojo, on=["id", "id_cojo"], how="left")
-    .join(r2_max, on=["cis_gene", "id"], how="inner")
-    .filter(pl.col("r2_cojo") == pl.col("r2_max_cojo"))
-    .group_by(["cis_gene", "id"])
-    .first()  # if ties, just take the first one
-    .select(["cis_gene", "id", "id_cojo", "r2_max_cojo"])
-    .rename({"id_cojo": "id_cojo_best"})
-)
 
-# 4) join back to the full dataset
-dat = dat.join(r2_best, on=["cis_gene", "id"], how="left")
+    # Calculate r2 for each cis-gene selected SNP (top trans tested from eQTLgen)
+    # with the cis-gene independent cis signals from INTERVAL (GCTA-COJO)
+    print(
+        "[9/9] Calculate r2 between selected top cis-eSNP and independent cis signals from INTERVAL (GCTA-COJO) (WARNING: for x1y1 pairs only)"
+    )
+    # Extract GCTA-COJO independent causal variants for each perturbed gene
+    cojo = (
+        pl.read_csv(
+            "/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/INTERVAL_eQTL_summary_statistics/cojo_independent_cis_signals.csv"
+        )
+        .select(
+            pl.col("gene_name").alias("cis_gene"),
+            pl.col("variant_id").alias("rsid_cojo"),
+            pl.col("chr").cast(pl.Utf8).alias("chr"),
+            pl.col("pos_b37").cast(pl.Int64).alias("pos_b37"),
+            pl.col("effect_allele").alias("effect_allele"),
+            pl.col("other_allele").alias("other_allele"),
+        )
+        # build the hail-friendly variant string
+        .with_columns(
+            pl.format(
+                "{}:{}:{}:{}",
+                pl.col("chr"),
+                pl.col("pos_b37"),
+                pl.col("other_allele"),
+                pl.col("effect_allele"),
+            ).alias("id_cojo")
+        )
+        .unique(subset=["cis_gene", "id_cojo"])
+    )
+
+    # 1) extract unique LD pairs
+    # Calculate r2 between SNP and COJO SNPs only for x1y1 pairs
+    # To reduce computation time and investigate only
+    df_ld_pairs = (
+        dat.filter((pl.col("x") == 1) & (pl.col("y") == 1))
+        .select(["cis_gene", "id"])
+        .unique()
+        .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
+        .select(["id", "id_cojo"])
+        .unique()
+    )
+
+    # 2) compute r2
+    r2_df_cojo = compute_r2_for_pairs(df_ld_pairs, lead_col="id_cojo").rename(
+        {"r2": "r2_cojo"}
+    )
+
+    # 3) get largest r2 for each gene across all COJO SNPs
+    r2_max = (
+        dat.select(["cis_gene", "id"])
+        .unique()
+        .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
+        .join(r2_df_cojo, on=["id", "id_cojo"], how="left")
+        .group_by(["cis_gene", "id"])
+        .agg(
+            pl.max("r2_cojo").alias("r2_max_cojo"),
+            pl.count("id_cojo").alias("n_cojo_signals"),
+        )
+    )
+    # get which COJO SNP achieved that max r2
+    r2_best = (
+        dat.select(["cis_gene", "id"])
+        .unique()
+        .join(cojo.select(["cis_gene", "id_cojo"]), on="cis_gene", how="inner")
+        .join(r2_df_cojo, on=["id", "id_cojo"], how="left")
+        .join(r2_max, on=["cis_gene", "id"], how="inner")
+        .filter(pl.col("r2_cojo") == pl.col("r2_max_cojo"))
+        .group_by(["cis_gene", "id"])
+        .first()  # if ties, just take the first one
+        .select(["cis_gene", "id", "id_cojo", "r2_max_cojo"])
+        .rename({"id_cojo": "id_cojo_best"})
+    )
+
+    # 4) join back to the full dataset
+    dat = dat.join(r2_best, on=["cis_gene", "id"], how="left")
 
 print("✔ Writing final output...")
 
-dat.write_csv("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/full_dat_GW_with_r2.csv")
+dat.write_csv(output_file)
