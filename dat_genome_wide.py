@@ -222,31 +222,31 @@ AF = (
 
 print("[4/9] Calculate Beta and SE for eQTLs")
 # Harmonise eQTLs with allele frequency data
-cis_eQTL = harmonise_eqtl(cis_eQTL, AF)
-trans_eQTL = harmonise_eqtl(trans_eQTL, AF)
+# cis_eQTL = harmonise_eqtl(cis_eQTL, AF)
+# trans_eQTL = harmonise_eqtl(trans_eQTL, AF)
 
-# Calculate Beta and SE from Z-score and NrSamples
-cis_eQTL = cis_eQTL.with_columns(
-    SE=1.0
-    / (
-        2.0
-        * pl.col("AF")
-        * (1.0 - pl.col("AF"))
-        * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
-    ).sqrt(),
-).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
+# # Calculate Beta and SE from Z-score and NrSamples
+# cis_eQTL = cis_eQTL.with_columns(
+#     SE=1.0
+#     / (
+#         2.0
+#         * pl.col("AF")
+#         * (1.0 - pl.col("AF"))
+#         * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
+#     ).sqrt(),
+# ).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
 
-trans_eQTL = trans_eQTL.with_columns(
-    SE=1.0
-    / (
-        2.0
-        * pl.col("AF")
-        * (1.0 - pl.col("AF"))
-        * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
-    ).sqrt(),
-).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
+# trans_eQTL = trans_eQTL.with_columns(
+#     SE=1.0
+#     / (
+#         2.0
+#         * pl.col("AF")
+#         * (1.0 - pl.col("AF"))
+#         * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
+#     ).sqrt(),
+# ).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
 
-# Add cis/trans suffix to columns (except SNP) to avoid name clashes when merging
+# # Add cis/trans suffix to columns (except SNP) to avoid name clashes when merging
 cis_eQTL = cis_eQTL.select(
     pl.col("id"),
     pl.col("SNP"),
@@ -255,20 +255,20 @@ cis_eQTL = cis_eQTL.select(
     ),  # append a _cis suffix to all columns except SNP and id
 )
 
-# Identify lead SNPs (smallest p-value) (before merge with trans-eQTLs. Select the lead SNP!)
-lead_snps = (
-    cis_eQTL.sort(
-        ["GeneSymbol_cis", "Pvalue_cis", pl.col("Beta_cis").abs()],
-        descending=[False, False, True],
-    )
-    .group_by("GeneSymbol_cis")
-    .first()
-    .select(
-        pl.col("GeneSymbol_cis").alias("cis_gene"),
-        pl.col("SNP").alias("rsid_lead"),
-        pl.col("id").alias("id_lead"),
-    )
-)
+# # Identify lead SNPs (smallest p-value) (before merge with trans-eQTLs. Select the lead SNP!)
+# lead_snps = (
+#     cis_eQTL.sort(
+#         ["GeneSymbol_cis", "Pvalue_cis", pl.col("Beta_cis").abs()],
+#         descending=[False, False, True],
+#     )
+#     .group_by("GeneSymbol_cis")
+#     .first()
+#     .select(
+#         pl.col("GeneSymbol_cis").alias("cis_gene"),
+#         pl.col("SNP").alias("rsid_lead"),
+#         pl.col("id").alias("id_lead"),
+#     )
+# )
 
 trans_eQTL = trans_eQTL.select(
     pl.col("SNP"),
