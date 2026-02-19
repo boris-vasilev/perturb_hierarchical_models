@@ -3,7 +3,11 @@ library(here)
 library(data.table)
 
 # Read MAF from 1000 Genomes European ancestry
-chr_frq_list <- list.files(path = ("/rds/project/rds-csoP2nj6Y6Y/biv22/data/1000G_Phase3_frq"), full.names = TRUE)
+chr_frq_list <- list.files(
+  path = "/rds/project/rds-csoP2nj6Y6Y/biv22/data/1000G_Phase3_frq/",
+  pattern = "\\.frq$",
+  full.names = TRUE
+)
 snp_frq_dt <- lapply(chr_frq_list, fread) %>% rbindlist
 
 # Adjust MAF based on allele matching between eQTLgen and 1000G
