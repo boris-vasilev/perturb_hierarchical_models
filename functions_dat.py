@@ -65,7 +65,7 @@ def harmonise_eqtl_1kg(eqtl_df: pl.DataFrame) -> pl.DataFrame:
     return df.collect()
 
 
-def harmonise_eqtl(eqtl_df: pl.DataFrame, AF: pl.DataFrame) -> pl.DataFrame:
+def harmonise_eqtl(eqtl_df: pl.DataFrame) -> pl.DataFrame:
     """
     Harmonise eQTL data with allele frequency data from eQTLgen. This includes:
         - Joining on SNP to get allele information
