@@ -25,7 +25,6 @@ parser.set_defaults(beta=True)
 parser.add_argument(
     "--af",
     type=str,
-    required=True,
     help="Allele frequency source",
     choices=["eQTLgen", "1KG"],
     default="eQTLgen",
@@ -261,7 +260,11 @@ cis_eQTL = cis_eQTL.select(
 # # Identify lead SNPs (smallest p-value) (before merge with trans-eQTLs. Select the lead SNP!)
 lead_snps = (
     cis_eQTL.sort(
-        ["GeneSymbol_cis", "Pvalue_cis", pl.col("Beta_cis").abs()],
+        [
+            "GeneSymbol_cis",
+            "Pvalue_cis",
+            pl.col("Beta_cis" if args.beta else "Zscore_cis").abs(),
+        ],
         descending=[False, False, True],
     )
     .group_by("GeneSymbol_cis")
@@ -415,7 +418,7 @@ if args.ld:
         .group_by(["cis_gene", "id"])
         .agg(
             pl.max("r2_cojo").alias("r2_max_cojo"),
-            pl.count("id_cojo").alias("n_cojo_signals"),
+            pl.count("id_cojo").alias("n_cojo_`signals"),
         )
     )
     # get which COJO SNP achieved that max r2
