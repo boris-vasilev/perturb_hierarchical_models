@@ -39,6 +39,7 @@ calculate_eQTL_beta <- function(eqtl_dt) {
   eqtl_dt[, Beta := Zscore * SE]
 
   # Return with useful columns
-  return(eqtl_dt[, .(SNP, GeneSymbol, Pvalue, FDR, Beta, SE, Zscore, MAF)])
+  # return(eqtl_dt[, .(SNP, GeneSymbol, Pvalue, FDR, Beta, SE, Zscore, MAF)])
+  return(eqtl_dt)
 }
 
