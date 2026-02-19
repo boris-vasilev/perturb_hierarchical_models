@@ -307,15 +307,28 @@ print(
 # cis-eSNP tested for trans effects, but not necessarily the lead cis-eSNP (smallest p-value overall) as that one might not have been tested for trans effects.
 # To get the lead cis-eSNP, we would need to go back to the full cis-eQTL summary stats, find the lead SNP per gene, and check if it was tested for trans effects
 # NOTE: For eQTLgen -- the lead SNP is often not trans-tested. For INTERVAL -- the lead SNPs are the ones tested
+# selected_snps = (
+#     merged_QTL.with_columns(
+#         abs_cis_eff=pl.col("Beta_cis" if args.beta else "Zscore_cis").abs()
+#     )
+#     .sort(["cis_gene", "Pvalue_cis", "abs_cis_eff"], descending=[False, False, True])
+#     .unique(subset=["cis_gene", "SNP"], keep="first")
+#     .unique(subset=["cis_gene"], keep="first")
+#     .select(["cis_gene", "SNP"])
+# )
+
 selected_snps = (
-    merged_QTL.with_columns(
-        abs_cis_eff=pl.col("Beta_cis" if args.beta else "Zscore_cis").abs()
-    )
-    .sort(["cis_gene", "Pvalue_cis", "abs_cis_eff"], descending=[False, False, True])
-    .unique(subset=["cis_gene", "SNP"], keep="first")
-    .unique(subset=["cis_gene"], keep="first")
+    merged_QTL.group_by("cis_gene")
+    .agg([pl.min("Pvalue_cis").alias("min_p")])
+    .join(merged_QTL, on="cis_gene")
+    .filter(pl.col("Pvalue_cis") == pl.col("min_p"))
+    .with_columns(abs_cis_eff=pl.col("Beta_cis" if args.beta else "Zscore_cis").abs())
+    .sort(["cis_gene", "abs_cis_eff"], descending=[False, True])
+    .group_by("cis_gene")
+    .first()
     .select(["cis_gene", "SNP"])
 )
+
 
 # Merge back onto full table to keep all columns but only the top SNP per cis gene
 merged_QTL = merged_QTL.join(selected_snps, on=["cis_gene", "SNP"], how="inner")
