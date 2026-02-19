@@ -136,10 +136,10 @@ cis_eSNPs <- cis_eQTL %>%
   as.data.table %>%
   filter(GeneSymbol %in% perturb_summary_stats$perturb) %>%
   calculate_eQTL_beta %>%
-  group_by(GeneSymbol) %>%
-  filter(Pvalue == min(Pvalue)) %>%
-  filter(abs(Beta) == max(abs(Beta))) %>%
-  ungroup() %>%
+  # group_by(GeneSymbol) %>%
+  # filter(Pvalue == min(Pvalue)) %>%
+  # filter(abs(Beta) == max(abs(Beta))) %>%
+  # ungroup() %>%
   filter(FDR < 0.05)
 
 message("  ✔ Significant perturbation cis-eSNPs found: ", nrow(cis_eSNPs))
@@ -151,8 +151,8 @@ trans_eQTL <- fread("/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/trans_eQTLs_eQ
 message("  ✔ trans-eQTLs loaded: ", nrow(trans_eQTL))
 
 message("[4/7] Selecting expressed genes trans-eQTLs and calculating beta")
-setkey(trans_eQTL, GeneSymbol)
-trans_eQTL <- trans_eQTL[SNP %in% cis_eSNPs$SNP & GeneSymbol %in% perturb_summary_stats$effect] %>% calculate_eQTL_beta
+setkey(trans_eQTL, Gene)
+trans_eQTL <- trans_eQTL[SNP %in% cis_eSNPs$SNP & Gene %in% perturb_summary_stats$gene] %>% calculate_eQTL_beta
 message("  ✔ Matching trans-eQTLs: ", nrow(trans_eQTL))
 
 message("[5/7] Merging cis and trans-eQTLs of the lead cis-eSNPs of perturbed genes")
@@ -173,14 +173,14 @@ message("  ✔ eQTL pairs: ", nrow(merged.QTL))
 
 message("[6/7] Selecting lead cis-eSNP of perturbed gene")
 
-# merged.QTL <- merged.QTL %>%
-#   group_by(perturb) %>%
-#   filter(Pvalue.perturb == min(Pvalue.perturb)) %>%
-#   filter(abs(Beta.perturb) == max(abs(Beta.perturb))) %>%
-#   ungroup()
+merged.QTL <- merged.QTL %>%
+  group_by(perturb) %>%
+  filter(Pvalue.perturb == min(Pvalue.perturb)) %>%
+  filter(abs(Beta.perturb) == max(abs(Beta.perturb))) %>%
+  ungroup()
 
 message("[7/7] Merging perturbation and eQTL pairs")
-dat <- merge(perturb_summary_stats, merged.QTL, by = c("perturb", "effect", "gene"))
+dat <- merge(perturb_summary_stats, merged.QTL, by = c("perturb", "gene"))
 message("  ✔ Final perturbation/eQTL data rows: ", nrow(dat))
 
 message("✔ Writing final outputs...")
