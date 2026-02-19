@@ -26,7 +26,7 @@ model <- args$model
 
 # eff <- if(args$efficient) "_eff" else ""
 
-dat_file <- glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/dat_{screen}")
+dat_file <- glue("/rds/project/rds-csoP2nj6Y6Y/biv22/data/pairs/dat_{screen}.csv")
 
 print(glue("Screen: {screen}            Model: {model} "))
 
