@@ -11,7 +11,7 @@ os.environ["PYSPARK_SUBMIT_ARGS"] = (
 )
 
 from pathlib import Path
-from functions_dat import compute_r2_for_pairs, harmonise_eqtl
+from functions_dat import compute_r2_for_pairs, harmonise_eqtl, harmonise_eqtl_1kg
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--screen", type=str, required=True, help="Perturb-seq screen")
@@ -19,6 +19,17 @@ parser.add_argument("--output", type=str, required=True, help="Output file name"
 parser.add_argument("--ld", action="store_true")
 parser.add_argument("--no-ld", dest="ld", action="store_false")
 parser.set_defaults(ld=True)
+parser.add_argument("--beta", action="store_true")
+parser.add_argument("--no-beta", dest="beta", action="store_false")
+parser.set_defaults(beta=True)
+parser.add_argument(
+    "--af",
+    type=str,
+    required=True,
+    help="Allele frequency source",
+    choices=["eQTLgen", "1KG"],
+    default="eQTLgen",
+)
 args = parser.parse_args()
 screen = args.screen
 
@@ -126,6 +137,7 @@ DE_stats = DE_stats.join(base_expression, on="trans_gene_ensg", how="left")
 print("[2/9] Read cis-eQTLs")
 # Get list of cis/trans genes from the DE stats to filter eQTLs and not load the whole summary stats
 cis_genes = DE_stats.select("cis_gene").unique().to_series().to_list()
+trans_genes = DE_stats.select("trans_gene").unique().to_series().to_list()
 trans_genes_ensg = DE_stats.select("trans_gene_ensg").unique().to_series().to_list()
 
 # Read cis-eQTLs
@@ -134,12 +146,12 @@ cis_eQTL = (
         f"{eqtl_dir}/cis_eQTLs_{eqtl_study}.tsv",
         separator="\t",
     )
-    .filter(
-        ~(
-            (pl.col("SNPChr") == 6)
-            & (pl.col("SNPPos").is_between(28_477_797, 33_448_354))
-        )  # Exclude MHC region
-    )
+    # .filter(
+    #     ~(
+    #         (pl.col("SNPChr") == 6)
+    #         & (pl.col("SNPPos").is_between(28_477_797, 33_448_354))
+    #     )  # Exclude MHC region
+    # )
     .select(
         [
             pl.format(
@@ -166,7 +178,7 @@ cis_eQTL = (
         # Filter out the IFNAR2-IL10RB readthrough gene (ENSG00000249624) which has the same symbol as IFNAR2.
         # Leaving it in introduces duplicates for IFNAR2.
         # Removing it from cis-eQTLs is consistent with what the Perturb-seq is -- perturbation of IFNAR2 not the readthrough transcript.
-        pl.col("Gene") != "ENSG00000249624",
+        # pl.col("Gene") != "ENSG00000249624",
     )
     .collect()
 )
@@ -199,52 +211,43 @@ trans_eQTL = (
         ]
     )
     .filter(
-        pl.col("Gene").is_in(trans_genes_ensg)  # Only trans-eQTLs of expressed genes
+        pl.col("SNP").is_in(cis_eQTL["SNP"]),
+        pl.col("Gene").is_in(trans_genes_ensg),  # Only trans-eQTLs of expressed genes
     )
     .collect()
 )
 
-# Read allele frequency data to calculate beta from Zscore and SE from NrSamples
-AF = (
-    pl.scan_csv(
-        f"{eqtl_dir}/AF_{eqtl_study}.txt", separator="\t", infer_schema_length=10000
-    )
-    .select(
-        [
-            pl.col("SNP"),
-            pl.col("AlleleA").alias("OtherAllele"),
-            pl.col("AlleleB").alias("AssessedAllele"),
-            pl.col("AlleleB_all").replace("NA", None).cast(pl.Float64).alias("AF"),
-        ]
-    )
-    .collect()
-)
+if args.beta:
+    print("[4/9] Calculate Beta and SE for eQTLs")
+    # Harmonise eQTLs with allele frequency data
 
-print("[4/9] Calculate Beta and SE for eQTLs")
-# Harmonise eQTLs with allele frequency data
-# cis_eQTL = harmonise_eqtl(cis_eQTL, AF)
-# trans_eQTL = harmonise_eqtl(trans_eQTL, AF)
+    if args.af == "eQTLgen":
+        cis_eQTL = harmonise_eqtl(cis_eQTL)
+        trans_eQTL = harmonise_eqtl(trans_eQTL)
 
-# # Calculate Beta and SE from Z-score and NrSamples
-# cis_eQTL = cis_eQTL.with_columns(
-#     SE=1.0
-#     / (
-#         2.0
-#         * pl.col("AF")
-#         * (1.0 - pl.col("AF"))
-#         * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
-#     ).sqrt(),
-# ).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
+        # Calculate Beta and SE from Z-score and NrSamples
+        cis_eQTL = cis_eQTL.with_columns(
+            SE=1.0
+            / (
+                2.0
+                * pl.col("AF")
+                * (1.0 - pl.col("AF"))
+                * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
+            ).sqrt(),
+        ).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
 
-# trans_eQTL = trans_eQTL.with_columns(
-#     SE=1.0
-#     / (
-#         2.0
-#         * pl.col("AF")
-#         * (1.0 - pl.col("AF"))
-#         * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
-#     ).sqrt(),
-# ).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
+        trans_eQTL = trans_eQTL.with_columns(
+            SE=1.0
+            / (
+                2.0
+                * pl.col("AF")
+                * (1.0 - pl.col("AF"))
+                * (pl.col("NrSamples") + pl.col("Zscore_aligned") ** 2)
+            ).sqrt(),
+        ).with_columns(Beta=pl.col("Zscore_aligned") * pl.col("SE"))
+    elif args.af == "1KG":
+        cis_eQTL = harmonise_eqtl_1kg(cis_eQTL)
+        trans_eQTL = harmonise_eqtl_1kg(trans_eQTL)
 
 # # Add cis/trans suffix to columns (except SNP) to avoid name clashes when merging
 cis_eQTL = cis_eQTL.select(
@@ -256,19 +259,19 @@ cis_eQTL = cis_eQTL.select(
 )
 
 # # Identify lead SNPs (smallest p-value) (before merge with trans-eQTLs. Select the lead SNP!)
-# lead_snps = (
-#     cis_eQTL.sort(
-#         ["GeneSymbol_cis", "Pvalue_cis", pl.col("Beta_cis").abs()],
-#         descending=[False, False, True],
-#     )
-#     .group_by("GeneSymbol_cis")
-#     .first()
-#     .select(
-#         pl.col("GeneSymbol_cis").alias("cis_gene"),
-#         pl.col("SNP").alias("rsid_lead"),
-#         pl.col("id").alias("id_lead"),
-#     )
-# )
+lead_snps = (
+    cis_eQTL.sort(
+        ["GeneSymbol_cis", "Pvalue_cis", pl.col("Beta_cis").abs()],
+        descending=[False, False, True],
+    )
+    .group_by("GeneSymbol_cis")
+    .first()
+    .select(
+        pl.col("GeneSymbol_cis").alias("cis_gene"),
+        pl.col("SNP").alias("rsid_lead"),
+        pl.col("id").alias("id_lead"),
+    )
+)
 
 trans_eQTL = trans_eQTL.select(
     pl.col("SNP"),
@@ -302,8 +305,10 @@ print(
 # To get the lead cis-eSNP, we would need to go back to the full cis-eQTL summary stats, find the lead SNP per gene, and check if it was tested for trans effects
 # NOTE: For eQTLgen -- the lead SNP is often not trans-tested. For INTERVAL -- the lead SNPs are the ones tested
 selected_snps = (
-    merged_QTL.with_columns(abs_beta_cis=pl.col("Zscore_cis").abs())
-    .sort(["cis_gene", "Pvalue_cis", "abs_beta_cis"], descending=[False, False, True])
+    merged_QTL.with_columns(
+        abs_cis_eff=pl.col("Beta_cis" if args.beta else "Zscore_cis").abs()
+    )
+    .sort(["cis_gene", "Pvalue_cis", "abs_cis_eff"], descending=[False, False, True])
     .unique(subset=["cis_gene", "SNP"], keep="first")
     .unique(subset=["cis_gene"], keep="first")
     .select(["cis_gene", "SNP"])

@@ -3,14 +3,93 @@ import polars as pl
 import time
 
 
+def harmonise_eqtl_1kg(eqtl_df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Harmonise eQTL summary statistics with 1000G allele frequencies.
+
+    Replicates R adjust_MAF + calculate_eQTL_beta logic:
+        - join on SNP
+        - align alleles
+        - flip MAF if reversed
+        - remove mismatches
+        - compute SE and Beta
+    """
+
+    frq_1000g = (
+        pl.scan_csv(
+            "/rds/project/rds-csoP2nj6Y6Y/biv22/data/1000G_Phase3_frq/*.tsv",
+            separator="\t",
+        )
+        .select(["SNP", "A1", "A2", "MAF"])
+        .collect()
+    )
+
+    # join frequency data
+    df = eqtl_df.lazy().join(frq_1000g.lazy(), on="SNP", how="inner")
+
+    # allele alignment
+    df = df.with_columns(
+        pl.when(
+            (pl.col("AssessedAllele") == pl.col("A1"))
+            & (pl.col("OtherAllele") == pl.col("A2"))
+        )
+        .then(pl.col("MAF"))
+        .when(
+            (pl.col("AssessedAllele") == pl.col("A2"))
+            & (pl.col("OtherAllele") == pl.col("A1"))
+        )
+        .then(1.0 - pl.col("MAF"))
+        .otherwise(None)
+        .alias("MAF_aligned")
+    )
+
+    # drop mismatches
+    df = df.filter(pl.col("MAF_aligned").is_not_null())
+
+    # compute SE
+    df = df.with_columns(
+        (
+            1.0
+            / (
+                2.0
+                * pl.col("MAF_aligned")
+                * (1.0 - pl.col("MAF_aligned"))
+                * (pl.col("NrSamples") + pl.col("Zscore") ** 2)
+            ).sqrt()
+        ).alias("SE")
+    )
+
+    # compute Beta
+    df = df.with_columns((pl.col("Zscore") * pl.col("SE")).alias("Beta"))
+
+    return df.collect()
+
+
 def harmonise_eqtl(eqtl_df: pl.DataFrame, AF: pl.DataFrame) -> pl.DataFrame:
     """
-    Harmonise eQTL data with allele frequency data. This includes:
+    Harmonise eQTL data with allele frequency data from eQTLgen. This includes:
         - Joining on SNP to get allele information
         - Determining if the alleles match, flip, or mismatch
         - Flipping Z-scores when alleles are flipped
         - Filtering out mismatches
     """
+    # Read allele frequency data to calculate beta from Zscore and SE from NrSamples
+    AF = (
+        pl.scan_csv(
+            "/rds/project/rds-csoP2nj6Y6Y/biv22/data/eqtl/AF_eQTLgen.txt",
+            separator="\t",
+            infer_schema_length=10000,
+        )
+        .select(
+            [
+                pl.col("SNP"),
+                pl.col("AlleleA").alias("OtherAllele"),
+                pl.col("AlleleB").alias("AssessedAllele"),
+                pl.col("AlleleB_all").replace("NA", None).cast(pl.Float64).alias("AF"),
+            ]
+        )
+        .collect()
+    )
     df = eqtl_df.lazy().join(AF.lazy(), on="SNP", how="left", suffix="_AF")
 
     # allele relationship
