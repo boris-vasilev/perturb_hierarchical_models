@@ -128,7 +128,7 @@ input_file = sys.argv[1]
 
 df = pl.read_csv(input_file)
 
-out = compute_r2_for_pairs(df)
+out = compute_r2_for_pairs(df, id_col="id", lead_col="causal_id")
 
 gene = input_file.split("/")[-1].replace(".csv", "")
 out.write_csv(f"results/{gene}.ld.tsv")
