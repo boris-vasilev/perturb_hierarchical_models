@@ -145,12 +145,12 @@ cis_eQTL = (
         f"{eqtl_dir}/cis_eQTLs_{eqtl_study}.tsv",
         separator="\t",
     )
-    # .filter(
-    #     ~(
-    #         (pl.col("SNPChr") == 6)
-    #         & (pl.col("SNPPos").is_between(28_477_797, 33_448_354))
-    #     )  # Exclude MHC region
-    # )
+    .filter(
+        ~(
+            (pl.col("SNPChr") == 6)
+            & (pl.col("SNPPos").is_between(28_477_797, 33_448_354))
+        )  # Exclude MHC region
+    )
     .select(
         [
             pl.format(
@@ -177,7 +177,7 @@ cis_eQTL = (
         # Filter out the IFNAR2-IL10RB readthrough gene (ENSG00000249624) which has the same symbol as IFNAR2.
         # Leaving it in introduces duplicates for IFNAR2.
         # Removing it from cis-eQTLs is consistent with what the Perturb-seq is -- perturbation of IFNAR2 not the readthrough transcript.
-        # pl.col("Gene") != "ENSG00000249624",
+        pl.col("Gene") != "ENSG00000249624",
     )
     .collect()
 )
