@@ -338,17 +338,17 @@ dat = merged_QTL.join(
 
 del DE_stats, merged_QTL
 
+# Join true lead SNP information
+dat = dat.join(
+    lead_snps,
+    on="cis_gene",
+    how="inner",
+)
+
 if args.ld:
     # Calculate r2 between cis-gene lead SNP (from)
     print(
         "[8/9] Calculate r2 between selected top cis-eSNP and lead cis-eSNP from eQTLgen (WARNING: for x1y1 pairs only)"
-    )
-
-    # Join true lead SNP information to estimate r2 with true lead SNPs
-    dat = dat.join(
-        lead_snps,
-        on="cis_gene",
-        how="inner",
     )
 
     # 1) extract unique LD pairs
