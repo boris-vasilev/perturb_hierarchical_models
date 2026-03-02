@@ -22,6 +22,9 @@ parser.set_defaults(ld=True)
 parser.add_argument("--beta", action="store_true")
 parser.add_argument("--no-beta", dest="beta", action="store_false")
 parser.set_defaults(beta=True)
+parser.add_argument("--top", action="store_true")
+parser.add_argument("--all", dest="top", action="store_false")
+parser.set_defaults(top=True)
 parser.add_argument(
     "--af",
     type=str,
@@ -300,28 +303,31 @@ merged_QTL = (
 )
 del cis_eQTL, trans_eQTL
 
-print(
-    "[6/9] Select only the most significant cis-eSNP tested for trans effects (WARNING: might not be lead SNP.)"
-)
-# Select top SNPs per cis gene (smallest p-value) - this is the most significant
-# cis-eSNP tested for trans effects, but not necessarily the lead cis-eSNP (smallest p-value overall) as that one might not have been tested for trans effects.
-# To get the lead cis-eSNP, we would need to go back to the full cis-eQTL summary stats, find the lead SNP per gene, and check if it was tested for trans effects
-# NOTE: For eQTLgen -- the lead SNP is often not trans-tested. For INTERVAL -- the lead SNPs are the ones tested
-selected_snps = (
-    merged_QTL.group_by("cis_gene")
-    .agg([pl.min("Pvalue_cis").alias("min_p")])
-    .join(merged_QTL, on="cis_gene")
-    .filter(pl.col("Pvalue_cis") == pl.col("min_p"))
-    .with_columns(abs_cis_eff=pl.col("Beta_cis" if args.beta else "Zscore_cis").abs())
-    .sort(["cis_gene", "abs_cis_eff"], descending=[False, True])
-    .group_by("cis_gene")
-    .first()
-    .select(["cis_gene", "SNP"])
-)
 
+if args.top:
+    # Select top SNPs per cis gene (smallest p-value) - this is the most significant
+    # cis-eSNP tested for trans effects, but not necessarily the lead cis-eSNP (smallest p-value overall) as that one might not have been tested for trans effects.
+    # To get the lead cis-eSNP, we would need to go back to the full cis-eQTL summary stats, find the lead SNP per gene, and check if it was tested for trans effects
+    # NOTE: For eQTLgen -- the lead SNP is often not trans-tested. For INTERVAL -- the lead SNPs are the ones tested
+    print(
+        "[6/9] Select only the most significant cis-eSNP tested for trans effects (WARNING: might not be lead SNP.)"
+    )
+    selected_snps = (
+        merged_QTL.group_by("cis_gene")
+        .agg([pl.min("Pvalue_cis").alias("min_p")])
+        .join(merged_QTL, on="cis_gene")
+        .filter(pl.col("Pvalue_cis") == pl.col("min_p"))
+        .with_columns(
+            abs_cis_eff=pl.col("Beta_cis" if args.beta else "Zscore_cis").abs()
+        )
+        .sort(["cis_gene", "abs_cis_eff"], descending=[False, True])
+        .group_by("cis_gene")
+        .first()
+        .select(["cis_gene", "SNP"])
+    )
 
-# Merge back onto full table to keep all columns but only the top SNP per cis gene
-merged_QTL = merged_QTL.join(selected_snps, on=["cis_gene", "SNP"], how="inner")
+    # Merge back onto full table to keep all columns but only the top SNP per cis gene
+    merged_QTL = merged_QTL.join(selected_snps, on=["cis_gene", "SNP"], how="inner")
 
 print("[7/9] Merge eQTL pairs with perturbation pairs")
 dat = merged_QTL.join(
